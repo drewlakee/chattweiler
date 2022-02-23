@@ -2,7 +2,10 @@ module chattweiler
 
 go 1.17
 
-require github.com/SevereCloud/vksdk/v2 v2.13.1
+require (
+    github.com/SevereCloud/vksdk/v2 v2.13.1
+    github.com/jmoiron/sqlx v1.3.4
+)
 
 require (
 	github.com/klauspost/compress v1.14.2 // indirect
