@@ -47,9 +47,9 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) InsertAll(wa
 		"INSERT INTO membership_warning (user_id, username, first_warning_ts, grace_period, is_relevant)" +
 			"VALUES ($1, $2, $3, $4, $5)"
 
-	beginTx := pgMembershipWarningRepository.db.MustBegin()
+	tx := pgMembershipWarningRepository.db.MustBegin()
 	for _, warning := range warnings {
-		pgMembershipWarningRepository.db.MustExec(
+		tx.MustExec(
 			insert,
 			warning.UserID,
 			warning.Username,
@@ -59,7 +59,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) InsertAll(wa
 		)
 	}
 
-	err := beginTx.Commit()
+	err := tx.Commit()
 	if err != nil {
 		fmt.Println(err)
 		return false
