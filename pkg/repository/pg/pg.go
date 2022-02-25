@@ -4,34 +4,62 @@ import (
 	"chattweiler/pkg/repository/model"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	"sync"
+	"sync/atomic"
+	"time"
+	"unsafe"
 )
 
 type CachedPgPhraseRepository struct {
-	db      *sqlx.DB
-	phrases []model.Phrase
+	db                   *sqlx.DB
+	cacheRefreshInterval time.Duration
+	lastCacheRefresh     time.Time
+	refreshMutex         sync.Mutex
+	phrases              []model.Phrase
 }
 
-func NewCachedPgPhraseRepository(db *sqlx.DB) *CachedPgPhraseRepository {
-	return &CachedPgPhraseRepository{db, nil}
+func NewCachedPgPhraseRepository(db *sqlx.DB, cacheRefreshInterval time.Duration) *CachedPgPhraseRepository {
+	return &CachedPgPhraseRepository{
+		db:                   db,
+		cacheRefreshInterval: cacheRefreshInterval,
+		lastCacheRefresh:     time.Now(),
+		phrases:              nil,
+	}
 }
 
 func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phrase {
-	if cachedPgPhraseRepository.phrases != nil && len(cachedPgPhraseRepository.phrases) != 0 {
-		return cachedPgPhraseRepository.phrases
+	if time.Now().Before(cachedPgPhraseRepository.lastCacheRefresh.Add(cachedPgPhraseRepository.cacheRefreshInterval)) {
+		// atomic phrases read
+		phrasesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&cachedPgPhraseRepository.phrases)))
+		if phrasesPtr != nil {
+			phrases := *(*[]model.Phrase)(phrasesPtr)
+			if len(phrases) != 0 {
+				return phrases
+			}
+		}
 	}
 
-	query :=
-		"SELECT phrase_id, weight, pt.name AS phrase_type, is_user_templated, is_audio_accompaniment, vk_audio_id, text" +
-			"FROM phrase AS p, phrase_type AS pt" +
-			"WHERE p.type = pt.type_id"
+	// cache refresh lock
+	cachedPgPhraseRepository.refreshMutex.Lock()
+	defer cachedPgPhraseRepository.refreshMutex.Unlock()
 
-	err := cachedPgPhraseRepository.db.Select(&cachedPgPhraseRepository.phrases, query, "")
+	query :=
+		"SELECT phrase_id, weight, pt.name AS phrase_type, is_user_templated, is_audio_accompaniment, vk_audio_id, text " +
+			"FROM phrase AS p, phrase_type AS pt " +
+			"WHERE p.type = pt.type_id "
+
+	var updatedPhrases []model.Phrase
+	err := cachedPgPhraseRepository.db.Select(&updatedPhrases, query)
 	if err != nil {
 		fmt.Println(err)
 		return []model.Phrase{}
 	}
 
-	return cachedPgPhraseRepository.phrases
+	// atomic phrases write
+	updatedPhrasesPtr := unsafe.Pointer(&updatedPhrases)
+	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&cachedPgPhraseRepository.phrases)), updatedPhrasesPtr)
+
+	return updatedPhrases
 }
 
 type PgMembershipWarningRepository struct {
@@ -44,12 +72,17 @@ func NewPgMembershipWarningRepository(db *sqlx.DB) *PgMembershipWarningRepositor
 
 func (pgMembershipWarningRepository *PgMembershipWarningRepository) InsertAll(warnings ...model.MembershipWarning) bool {
 	insert :=
-		"INSERT INTO membership_warning (user_id, username, first_warning_ts, grace_period, is_relevant)" +
+		"INSERT INTO membership_warning (user_id, username, first_warning_ts, grace_period_ns, is_relevant) " +
 			"VALUES ($1, $2, $3, $4, $5)"
 
-	tx := pgMembershipWarningRepository.db.MustBegin()
+	tx, err := pgMembershipWarningRepository.db.Begin()
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
 	for _, warning := range warnings {
-		tx.MustExec(
+		_, err := tx.Exec(
 			insert,
 			warning.UserID,
 			warning.Username,
@@ -57,9 +90,18 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) InsertAll(wa
 			warning.GracePeriod,
 			warning.IsRelevant,
 		)
+
+		if err != nil {
+			fmt.Println(err)
+			err := tx.Rollback()
+			if err != nil {
+				fmt.Println(err)
+			}
+			return false
+		}
 	}
 
-	err := tx.Commit()
+	err = tx.Commit()
 	if err != nil {
 		fmt.Println(err)
 		return false
@@ -70,11 +112,11 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) InsertAll(wa
 
 func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAll() []model.MembershipWarning {
 	query :=
-		"SELECT warning_id, user_id, username, first_warning_ts, grace_period, is_relevant" +
+		"SELECT warning_id, user_id, username, first_warning_ts, grace_period_ns, is_relevant " +
 			"FROM membership_warning"
 
 	var warnings []model.MembershipWarning
-	err := pgMembershipWarningRepository.db.Select(&warnings, query, "")
+	err := pgMembershipWarningRepository.db.Select(&warnings, query)
 	if err != nil {
 		fmt.Println(err)
 		return []model.MembershipWarning{}
@@ -85,12 +127,12 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAll() []
 
 func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAllRelevant() []model.MembershipWarning {
 	query :=
-		"SELECT warning_id, user_id, username, first_warning_ts, grace_period, is_relevant" +
+		"SELECT warning_id, user_id, username, first_warning_ts, grace_period_ns, is_relevant " +
 			"FROM membership_warning" +
 			"WHERE is_relevant = true"
 
 	var warnings []model.MembershipWarning
-	err := pgMembershipWarningRepository.db.Select(&warnings, query, "")
+	err := pgMembershipWarningRepository.db.Select(&warnings, query)
 	if err != nil {
 		fmt.Println(err)
 		return []model.MembershipWarning{}
