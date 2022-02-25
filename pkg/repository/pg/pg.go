@@ -2,6 +2,7 @@ package pg
 
 import (
 	"chattweiler/pkg/repository/model"
+	"chattweiler/pkg/repository/model/types"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"sync"
@@ -60,6 +61,16 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phra
 	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&cachedPgPhraseRepository.phrases)), updatedPhrasesPtr)
 
 	return updatedPhrases
+}
+
+func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAllByType(phraseType types.PhraseType) []model.Phrase {
+	var phrases []model.Phrase
+	for _, phrase := range cachedPgPhraseRepository.FindAll() {
+		if phraseType == phrase.PhraseType {
+			phrases = append(phrases, phrase)
+		}
+	}
+	return phrases
 }
 
 type PgMembershipWarningRepository struct {
