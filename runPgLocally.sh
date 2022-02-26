@@ -1,4 +1,7 @@
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+#!/bin/bash
+
+if [[ "$OSTYPE" == "linux"* ]]; then
+  MOUNT_SCRIPT="$(pwd)/sql/initdb.sql"
   docker run -p 5433:5432 \
   -v ./sql/initdb.sql:/docker-entrypoint-initdb.d/initdb.sql \
   --name postgres-chattweiler \
