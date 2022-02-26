@@ -11,7 +11,8 @@ type PhraseRepository interface {
 }
 
 type MembershipWarningRepository interface {
-	InsertAll(warnings ...model.MembershipWarning) bool
+	Insert(model.MembershipWarning) bool
+	UpdateAllToUnRelevant(...model.MembershipWarning) bool
 	FindAll() []model.MembershipWarning
 	FindAllRelevant() []model.MembershipWarning
 }

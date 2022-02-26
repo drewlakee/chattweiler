@@ -37,3 +37,26 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 
 	return builder.Params
 }
+
+func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
+	phrase := roulette.Spin(phrases...)
+	if phrase == nil {
+		fmt.Printf("Choosed empty phrase")
+		return api.Params{}
+	}
+
+	builder := params.NewMessagesSendBuilder()
+	builder.PeerID(peerId)
+	builder.RandomID(0)
+	builder.Message(phrase.Text)
+
+	if phrase.IsAudioAccompaniment {
+		if phrase.VkAudioId.Valid {
+			builder.Attachment(phrase.VkAudioId.String)
+		} else {
+			fmt.Println("Pharse specified with audio accompaniment, but audio_id doesn't pointed. phrase_id:", phrase.PhraseID)
+		}
+	}
+
+	return builder.Params
+}

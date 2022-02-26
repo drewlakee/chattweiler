@@ -6,22 +6,27 @@ import (
 	"chattweiler/pkg/vk"
 	"chattweiler/pkg/vk/events"
 	"chattweiler/pkg/vk/messages"
+	"chattweiler/pkg/vk/warden/membership"
+	"errors"
 	"fmt"
 	"github.com/SevereCloud/vksdk/v2/api"
 	vklp "github.com/SevereCloud/vksdk/v2/longpoll-user"
 	vklpwrapper "github.com/SevereCloud/vksdk/v2/longpoll-user/v3"
 	wrapper "github.com/SevereCloud/vksdk/v2/longpoll-user/v3"
+	"os"
+	"strconv"
+	"time"
 )
 
 type Bot struct {
-	vkapi                  *api.VK
-	vklp                   *vklp.LongPoll
-	vklpwrapper            *wrapper.Wrapper
-	phraseRepo             repository.PhraseRepository
-	membershipWarningsRepo repository.MembershipWarningRepository
+	vkapi             *api.VK
+	vklp              *vklp.LongPoll
+	vklpwrapper       *wrapper.Wrapper
+	phrasesRepo       repository.PhraseRepository
+	membershipChecker *membership.Checker
 }
 
-func NewBot(vkToken string, phraseRepo repository.PhraseRepository, membershipWarningsRepo repository.MembershipWarningRepository) *Bot {
+func NewBot(vkToken string, phrasesRepo repository.PhraseRepository, membershipWarningsRepo repository.MembershipWarningRepository) *Bot {
 	vkapi := api.NewVK(vkToken)
 
 	lp, err := vklp.NewLongPoll(vkapi, 0)
@@ -29,14 +34,37 @@ func NewBot(vkToken string, phraseRepo repository.PhraseRepository, membershipWa
 		panic(err)
 	}
 
-	wrappedlp := vklpwrapper.NewWrapper(lp)
+	chatId, err := strconv.ParseInt(os.Getenv("vk.community.chat.id"), 10, 64)
+	if err != nil {
+		fmt.Println(err)
+		panic(errors.New("Membership checker initialization: vk.community.chat.id parse failed"))
+	}
+
+	communityId, err := strconv.ParseInt(os.Getenv("vk.community.id"), 10, 64)
+	if err != nil {
+		fmt.Println(err)
+		panic(errors.New("Membership checker initialization: vk.community.id parse failed"))
+	}
+
+	rawMembershipCheckInterval := os.Getenv("chat.warden.membership.check.interval")
+	membershipCheckInterval, err := time.ParseDuration(rawMembershipCheckInterval)
+	if err != nil {
+		fmt.Println(err)
+		panic(errors.New("Membership checker initialization: chat.warden.membership.check.interval parse failed"))
+	}
+
+	gracePeriod, err := time.ParseDuration(os.Getenv("chat.warden.membership.grace.period"))
+	if err != nil {
+		fmt.Println(err)
+		panic(errors.New("Membership checker initialization: chat.warden.membership.grace.period parse failed"))
+	}
 
 	return &Bot{
-		vkapi:                  vkapi,
-		vklp:                   lp,
-		vklpwrapper:            wrappedlp,
-		phraseRepo:             phraseRepo,
-		membershipWarningsRepo: membershipWarningsRepo,
+		vkapi:             vkapi,
+		vklp:              lp,
+		vklpwrapper:       vklpwrapper.NewWrapper(lp),
+		phrasesRepo:       phrasesRepo,
+		membershipChecker: membership.NewChecker(chatId, communityId, membershipCheckInterval, gracePeriod, vkapi, phrasesRepo, membershipWarningsRepo),
 	}
 }
 
@@ -51,7 +79,7 @@ func (bot *Bot) handleChatUserJoinEvent(event wrapper.ChatInfoChange) {
 	_, err = bot.vkapi.MessagesSend(messages.BuildMessageUsingPersonalizedPhrase(
 		event.PeerID,
 		user,
-		bot.phraseRepo.FindAllByType(types.Welcome),
+		bot.phrasesRepo.FindAllByType(types.Welcome),
 	))
 	if err != nil {
 		fmt.Println(err)
@@ -70,7 +98,7 @@ func (bot *Bot) handleChatUserLeaveEvent(event wrapper.ChatInfoChange) {
 	_, err = bot.vkapi.MessagesSend(messages.BuildMessageUsingPersonalizedPhrase(
 		event.PeerID,
 		user,
-		bot.phraseRepo.FindAllByType(types.Goodbye),
+		bot.phrasesRepo.FindAllByType(types.Goodbye),
 	))
 	if err != nil {
 		fmt.Println(err)
@@ -87,6 +115,22 @@ func (bot *Bot) Start() error {
 			bot.handleChatUserLeaveEvent(event)
 		}
 	})
+
+	bot.vklpwrapper.OnNewMessage(func(event wrapper.NewMessage) {
+		if event.Text == "bark!" {
+			_, err := bot.vkapi.MessagesSend(messages.BuildMessagePhrase(
+				event.PeerID,
+				bot.phrasesRepo.FindAllByType(types.Info),
+			))
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+		}
+	})
+
+	// run async
+	go bot.membershipChecker.LoopCheck()
 
 	fmt.Println("Bot is running...")
 	err := bot.vklp.Run()

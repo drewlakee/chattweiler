@@ -52,7 +52,7 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phra
 	var updatedPhrases []model.Phrase
 	err := cachedPgPhraseRepository.db.Select(&updatedPhrases, query)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("Error: %s, Query: %s", err.Error(), query)
 		return []model.Phrase{}
 	}
 
@@ -60,6 +60,7 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phra
 	updatedPhrasesPtr := unsafe.Pointer(&updatedPhrases)
 	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&cachedPgPhraseRepository.phrases)), updatedPhrasesPtr)
 
+	cachedPgPhraseRepository.lastCacheRefresh = time.Now()
 	return updatedPhrases
 }
 
@@ -81,40 +82,53 @@ func NewPgMembershipWarningRepository(db *sqlx.DB) *PgMembershipWarningRepositor
 	return &PgMembershipWarningRepository{db}
 }
 
-func (pgMembershipWarningRepository *PgMembershipWarningRepository) InsertAll(warnings ...model.MembershipWarning) bool {
+func (pgMembershipWarningRepository *PgMembershipWarningRepository) Insert(warning model.MembershipWarning) bool {
 	insert :=
 		"INSERT INTO membership_warning (user_id, username, first_warning_ts, grace_period_ns, is_relevant) " +
 			"VALUES ($1, $2, $3, $4, $5)"
 
+	_, err := pgMembershipWarningRepository.db.Exec(
+		insert,
+		warning.UserID,
+		warning.Username,
+		warning.FirstWarningTs,
+		warning.GracePeriod,
+		warning.IsRelevant,
+	)
+
+	if err != nil {
+		fmt.Printf("Error: %s, Insert: %s, Params: %v", err.Error(), insert, warning)
+		return false
+	}
+
+	return true
+}
+
+func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToUnRelevant(warnings ...model.MembershipWarning) bool {
+	update :=
+		"UPDATE membership_warning " +
+			"SET is_relevant=false " +
+			"WHERE warning_id = $1"
+
 	tx, err := pgMembershipWarningRepository.db.Begin()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("Error: %s, Update: %s", err.Error(), update)
 		return false
 	}
 
 	for _, warning := range warnings {
-		_, err := tx.Exec(
-			insert,
-			warning.UserID,
-			warning.Username,
-			warning.FirstWarningTs,
-			warning.GracePeriod,
-			warning.IsRelevant,
-		)
-
+		_, err := tx.Exec(update, warning.WarningID)
 		if err != nil {
-			fmt.Println(err)
-			err := tx.Rollback()
-			if err != nil {
-				fmt.Println(err)
-			}
+			fmt.Printf("Error: %s, Update: %s, Params: %v", err.Error(), update, warning)
+			tx.Rollback()
 			return false
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("Error: %s, Update: %s", err.Error(), update)
+		tx.Rollback()
 		return false
 	}
 
@@ -129,7 +143,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAll() []
 	var warnings []model.MembershipWarning
 	err := pgMembershipWarningRepository.db.Select(&warnings, query)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("Error: %s, Query: %s", err.Error(), query)
 		return []model.MembershipWarning{}
 	}
 
@@ -139,13 +153,13 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAll() []
 func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAllRelevant() []model.MembershipWarning {
 	query :=
 		"SELECT warning_id, user_id, username, first_warning_ts, grace_period_ns, is_relevant " +
-			"FROM membership_warning" +
+			"FROM membership_warning " +
 			"WHERE is_relevant = true"
 
 	var warnings []model.MembershipWarning
 	err := pgMembershipWarningRepository.db.Select(&warnings, query)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("Error: %s, Query: %s", err.Error(), query)
 		return []model.MembershipWarning{}
 	}
 
