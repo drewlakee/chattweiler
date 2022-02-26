@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/api/params"
+	"github.com/SevereCloud/vksdk/v2/object"
 	"strconv"
 	"time"
 )
@@ -44,7 +45,7 @@ func NewChecker(
 	}
 }
 
-func (checker *Checker) checkAlreadyRelevantMembershipWarnings(conversationMembers api.MessagesGetConversationMembersResponse) (map[int]bool, error) {
+func (checker *Checker) checkAlreadyRelevantMembershipWarnings() (map[int]bool, error) {
 	alreadyForewarnedUsers := map[int]bool{}
 	relevantWarnings := checker.membershipWarningsRepo.FindAllRelevant()
 
@@ -92,18 +93,14 @@ func (checker *Checker) checkAlreadyRelevantMembershipWarnings(conversationMembe
 	return alreadyForewarnedUsers, nil
 }
 
-func (checker *Checker) checkChatForNewWarning(convesationMembers api.MessagesGetConversationMembersResponse, alreadyForewarnedUsers map[int]bool) error {
+func (checker *Checker) checkChatForNewWarning(members []object.UsersUser, alreadyForewarnedUsers map[int]bool) error {
 	isMemberUserIDsBuilder := params.NewGroupsIsMemberBuilder()
 	isMemberUserIDsBuilder.GroupID(strconv.FormatInt(checker.communityId, 10))
-	userIds := make([]int, convesationMembers.Count-1)
-	for index, user := range convesationMembers.Items {
-		// community id is negative
-		// except the community
-		if user.MemberID > 0 {
-			userIds[index-1] = user.MemberID
-		}
+	userIds := make([]int, len(members))
+	for index, user := range members {
+		userIds[index] = user.ID
 	}
-	if len(userIds) == 0 {
+	if len(members) == 0 {
 		fmt.Println("No one in the conversation except the community")
 		return nil
 	}
@@ -121,14 +118,14 @@ func (checker *Checker) checkChatForNewWarning(convesationMembers api.MessagesGe
 			newWarning.IsRelevant = true
 			newWarning.GracePeriod = checker.gracePeriod
 			newWarning.FirstWarningTs = time.Now()
-			newWarning.Username = convesationMembers.Profiles[index].ScreenName
+			newWarning.Username = members[index].ScreenName
 			newWarning.UserID = membership.UserID
 			checker.membershipWarningsRepo.Insert(newWarning)
 
 			peerId := 2000000000 + int(checker.conversationId)
 			_, err := checker.vkapi.MessagesSend(messages.BuildMessageUsingPersonalizedPhrase(
 				peerId,
-				&convesationMembers.Profiles[index],
+				&members[index],
 				checker.phrasesRepo.FindAllByType(types.MembershipWarning),
 			))
 			if err != nil {
@@ -150,7 +147,7 @@ func (checker *Checker) LoopCheck() {
 			time.Sleep(checker.checkInterval)
 		}
 
-		convesationMembers, err := checker.vkapi.MessagesGetConversationMembers(api.Params{
+		conversationMembers, err := checker.vkapi.MessagesGetConversationMembers(api.Params{
 			"peer_id": 2000000000 + checker.conversationId,
 		})
 		if err != nil {
@@ -159,14 +156,15 @@ func (checker *Checker) LoopCheck() {
 			continue
 		}
 
-		alreadyForewarnedUsers, err := checker.checkAlreadyRelevantMembershipWarnings(convesationMembers)
+		members := filterOnlyCommonMembers(conversationMembers)
+		alreadyForewarnedUsers, err := checker.checkAlreadyRelevantMembershipWarnings()
 		if err != nil {
 			fmt.Println(err)
 			successfulCheckAttempt = false
 			continue
 		}
 
-		err = checker.checkChatForNewWarning(convesationMembers, alreadyForewarnedUsers)
+		err = checker.checkChatForNewWarning(members, alreadyForewarnedUsers)
 		if err != nil {
 			fmt.Println(err)
 			successfulCheckAttempt = false
@@ -176,4 +174,24 @@ func (checker *Checker) LoopCheck() {
 		successfulCheckAttempt = true
 		time.Sleep(checker.checkInterval)
 	}
+}
+
+func filterOnlyCommonMembers(response api.MessagesGetConversationMembersResponse) []object.UsersUser {
+	commonMembers := make(map[int]bool)
+	for _, member := range response.Items {
+		if !member.IsAdmin && !member.IsOwner && member.CanKick {
+			commonMembers[member.MemberID] = true
+		}
+	}
+
+	commonMemberUserProfiles := make([]object.UsersUser, len(commonMembers))
+	index := 0
+	for _, user := range response.Profiles {
+		if _, isCommonMember := commonMembers[user.ID]; isCommonMember && index < len(commonMembers) {
+			commonMemberUserProfiles[index] = user
+			index++
+		}
+	}
+
+	return commonMemberUserProfiles
 }
