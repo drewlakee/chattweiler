@@ -116,7 +116,7 @@ func (checker *Checker) checkChatForNewWarning(convesationMembers api.MessagesGe
 
 	for index, membership := range membershipVector {
 		_, alreadyForewarnedUser := alreadyForewarnedUsers[membership.UserID]
-		if !bool(convesationMembers.Items[index+1].IsAdmin) && !bool(membership.Member) && !alreadyForewarnedUser {
+		if !bool(membership.Member) && !alreadyForewarnedUser {
 			newWarning := model.MembershipWarning{}
 			newWarning.IsRelevant = true
 			newWarning.GracePeriod = checker.gracePeriod

@@ -52,7 +52,7 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phra
 	var updatedPhrases []model.Phrase
 	err := cachedPgPhraseRepository.db.Select(&updatedPhrases, query)
 	if err != nil {
-		fmt.Printf("Error: %s, Query: %s", err.Error(), query)
+		fmt.Printf("Error: %s, Query: %s\n", err.Error(), query)
 		return []model.Phrase{}
 	}
 
@@ -97,7 +97,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) Insert(warni
 	)
 
 	if err != nil {
-		fmt.Printf("Error: %s, Insert: %s, Params: %v", err.Error(), insert, warning)
+		fmt.Printf("Error: %s, Insert: %s, Params: %v\n", err.Error(), insert, warning)
 		return false
 	}
 
@@ -112,14 +112,14 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToU
 
 	tx, err := pgMembershipWarningRepository.db.Begin()
 	if err != nil {
-		fmt.Printf("Error: %s, Update: %s", err.Error(), update)
+		fmt.Printf("Error: %s, Update: %s\n", err.Error(), update)
 		return false
 	}
 
 	for _, warning := range warnings {
 		_, err := tx.Exec(update, warning.WarningID)
 		if err != nil {
-			fmt.Printf("Error: %s, Update: %s, Params: %v", err.Error(), update, warning)
+			fmt.Printf("Error: %s, Update: %s, Params: %v\n", err.Error(), update, warning)
 			tx.Rollback()
 			return false
 		}
@@ -127,7 +127,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToU
 
 	err = tx.Commit()
 	if err != nil {
-		fmt.Printf("Error: %s, Update: %s", err.Error(), update)
+		fmt.Printf("Error: %s, Update: %s\n", err.Error(), update)
 		tx.Rollback()
 		return false
 	}
@@ -143,7 +143,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAll() []
 	var warnings []model.MembershipWarning
 	err := pgMembershipWarningRepository.db.Select(&warnings, query)
 	if err != nil {
-		fmt.Printf("Error: %s, Query: %s", err.Error(), query)
+		fmt.Printf("Error: %s, Query: %s\n", err.Error(), query)
 		return []model.MembershipWarning{}
 	}
 
@@ -159,7 +159,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAllRelev
 	var warnings []model.MembershipWarning
 	err := pgMembershipWarningRepository.db.Select(&warnings, query)
 	if err != nil {
-		fmt.Printf("Error: %s, Query: %s", err.Error(), query)
+		fmt.Printf("Error: %s, Query: %s\n", err.Error(), query)
 		return []model.MembershipWarning{}
 	}
 

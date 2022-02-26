@@ -13,7 +13,7 @@ import (
 func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phrases []model.Phrase) api.Params {
 	phrase := roulette.Spin(phrases...)
 	if phrase == nil {
-		fmt.Printf("Choosed empty phrase for user")
+		fmt.Printf("Choosed empty phrase for user\n")
 		return api.Params{}
 	}
 
@@ -41,7 +41,7 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 	phrase := roulette.Spin(phrases...)
 	if phrase == nil {
-		fmt.Printf("Choosed empty phrase")
+		fmt.Printf("Choosed empty phrase\n")
 		return api.Params{}
 	}
 
