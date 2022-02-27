@@ -1,1 +1,4 @@
 .idea
+
+# environment variables files
+*.env

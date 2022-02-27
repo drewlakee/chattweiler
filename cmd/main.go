@@ -1,52 +1,34 @@
 package main
 
 import (
+	"chattweiler/pkg/bot"
+	"chattweiler/pkg/repository/pg"
 	"fmt"
-	vkapi "github.com/SevereCloud/vksdk/v2/api"
-	vklp "github.com/SevereCloud/vksdk/v2/longpoll-user"
-	vklpwrapper "github.com/SevereCloud/vksdk/v2/longpoll-user/v3"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"os"
+	"time"
 )
 
 func main() {
-	vk := vkapi.NewVK(os.Getenv("vk_community_bot_token"))
-
-	poll, err := vklp.NewLongPoll(vk, 0)
+	vkBotToken := os.Getenv("vk.community.bot.token")
+	pgDataSourceString := os.Getenv("pg.datasource.string")
+	db, err := sqlx.Connect("postgres", pgDataSourceString)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 
-	wrappedLongPoll := vklpwrapper.NewWrapper(poll)
-	wrappedLongPoll.OnChatInfoChange(func(event vklpwrapper.ChatInfoChange) {
-		if event.TypeID-1 == vklpwrapper.ChatUserCome {
-			response, _ := vk.UsersGet(vkapi.Params{
-				"user_ids": event.Info,
-				"fields":   "screen_name",
-			})
-			fmt.Println("User", response[0].ScreenName, "has joined to the chat")
-			_, _ = vk.MessagesSend(vkapi.Params{
-				"peer_id":   event.PeerID,
-				"random_id": 0,
-				"message":   "Hey there, @" + response[0].ScreenName + "!",
-			})
-		}
+	rawPgCacheRefreshInterval := os.Getenv("pg.phrases.cache.refresh.interval")
+	pgCacheRefreshInterval, err := time.ParseDuration(rawPgCacheRefreshInterval)
 
-		if event.TypeID-1 == vklpwrapper.ChatUserLeave {
-			response, _ := vk.UsersGet(vkapi.Params{
-				"user_ids": event.Info,
-				"fields":   "screen_name",
-			})
-			fmt.Println("User", response[0].ScreenName, "has leaved the chat")
-			_, _ = vk.MessagesSend(vkapi.Params{
-				"peer_id":   event.PeerID,
-				"random_id": 0,
-				"message":   "See you later @" + response[0].ScreenName + "!",
-			})
-		}
-	})
+	pgCachedPgPhraseRepository := pg.NewCachedPgPhraseRepository(db, pgCacheRefreshInterval)
+	pgMembershipWarningRepository := pg.NewPgMembershipWarningRepository(db)
 
-	err = poll.Run()
+	worker := bot.NewBot(vkBotToken, pgCachedPgPhraseRepository, pgMembershipWarningRepository)
+
+	err = worker.Start()
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 }
