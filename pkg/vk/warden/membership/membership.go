@@ -45,7 +45,7 @@ func NewChecker(
 	}
 }
 
-func (checker *Checker) checkAlreadyRelevantMembershipWarnings() (map[int]bool, error) {
+func (checker *Checker) checkAlreadyRelevantMembershipWarnings(members map[int]object.UsersUser) (map[int]bool, error) {
 	alreadyForewarnedUsers := map[int]bool{}
 	relevantWarnings := checker.membershipWarningsRepo.FindAllRelevant()
 
@@ -74,13 +74,16 @@ func (checker *Checker) checkAlreadyRelevantMembershipWarnings() (map[int]bool, 
 	}
 
 	for index, expiredWarning := range expiredWarnings {
-		if membershipVector == nil || !membershipVector[index].Member {
-			messagesRemoveChatUserBuilder := params.NewMessagesRemoveChatUserBuilder()
-			messagesRemoveChatUserBuilder.UserID(expiredWarning.UserID)
-			messagesRemoveChatUserBuilder.ChatID(int(checker.conversationId))
-			_, err := checker.vkapi.MessagesRemoveChatUser(messagesRemoveChatUserBuilder.Params)
-			if err != nil && err.Error() != "api: User not found in chat" {
-				return nil, err
+		if membershipVector != nil {
+			_, stillSittingInChat := members[membershipVector[index].UserID]
+			if stillSittingInChat && !bool(membershipVector[index].Member) {
+				messagesRemoveChatUserBuilder := params.NewMessagesRemoveChatUserBuilder()
+				messagesRemoveChatUserBuilder.UserID(expiredWarning.UserID)
+				messagesRemoveChatUserBuilder.ChatID(int(checker.conversationId))
+				_, err := checker.vkapi.MessagesRemoveChatUser(messagesRemoveChatUserBuilder.Params)
+				if err != nil && err.Error() != "api: User not found in chat" {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -92,12 +95,14 @@ func (checker *Checker) checkAlreadyRelevantMembershipWarnings() (map[int]bool, 
 	return alreadyForewarnedUsers, nil
 }
 
-func (checker *Checker) checkChatForNewWarning(members []object.UsersUser, alreadyForewarnedUsers map[int]bool) error {
+func (checker *Checker) checkChatForNewWarning(members map[int]object.UsersUser, alreadyForewarnedUsers map[int]bool) error {
 	isMemberUserIDsBuilder := params.NewGroupsIsMemberBuilder()
 	isMemberUserIDsBuilder.GroupID(strconv.FormatInt(checker.communityId, 10))
 	userIds := make([]int, len(members))
-	for index, user := range members {
-		userIds[index] = user.ID
+	index := 0
+	for userId := range members {
+		userIds[index] = userId
+		index++
 	}
 	if len(members) == 0 {
 		fmt.Println("No one in the conversation except the community")
@@ -110,21 +115,23 @@ func (checker *Checker) checkChatForNewWarning(members []object.UsersUser, alrea
 		return err
 	}
 
-	for index, membership := range membershipVector {
+	for _, membership := range membershipVector {
 		_, alreadyForewarnedUser := alreadyForewarnedUsers[membership.UserID]
 		if !bool(membership.Member) && !alreadyForewarnedUser {
+			userProfile := members[membership.UserID]
+
 			newWarning := model.MembershipWarning{}
 			newWarning.IsRelevant = true
 			newWarning.GracePeriod = checker.gracePeriod
 			newWarning.FirstWarningTs = time.Now()
-			newWarning.Username = members[index].ScreenName
-			newWarning.UserID = membership.UserID
+			newWarning.Username = userProfile.ScreenName
+			newWarning.UserID = userProfile.ID
 			checker.membershipWarningsRepo.Insert(newWarning)
 
 			peerId := 2000000000 + int(checker.conversationId)
 			_, err := checker.vkapi.MessagesSend(messages.BuildMessageUsingPersonalizedPhrase(
 				peerId,
-				&members[index],
+				&userProfile,
 				checker.phrasesRepo.FindAllByType(types.MembershipWarning),
 			))
 			if err != nil {
@@ -156,7 +163,7 @@ func (checker *Checker) LoopCheck() {
 		}
 
 		members := filterOnlyCommonMembers(conversationMembers)
-		alreadyForewarnedUsers, err := checker.checkAlreadyRelevantMembershipWarnings()
+		alreadyForewarnedUsers, err := checker.checkAlreadyRelevantMembershipWarnings(members)
 		if err != nil {
 			fmt.Println(err)
 			successfulCheckAttempt = false
@@ -175,7 +182,7 @@ func (checker *Checker) LoopCheck() {
 	}
 }
 
-func filterOnlyCommonMembers(response api.MessagesGetConversationMembersResponse) []object.UsersUser {
+func filterOnlyCommonMembers(response api.MessagesGetConversationMembersResponse) map[int]object.UsersUser {
 	commonMembers := make(map[int]bool)
 	for _, member := range response.Items {
 		if !member.IsAdmin && !member.IsOwner && member.CanKick {
@@ -183,12 +190,10 @@ func filterOnlyCommonMembers(response api.MessagesGetConversationMembersResponse
 		}
 	}
 
-	commonMemberUserProfiles := make([]object.UsersUser, len(commonMembers))
-	index := 0
+	commonMemberUserProfiles := make(map[int]object.UsersUser, len(commonMembers))
 	for _, user := range response.Profiles {
-		if _, isCommonMember := commonMembers[user.ID]; isCommonMember && index < len(commonMembers) {
-			commonMemberUserProfiles[index] = user
-			index++
+		if _, isCommonMember := commonMembers[user.ID]; isCommonMember {
+			commonMemberUserProfiles[user.ID] = user
 		}
 	}
 
