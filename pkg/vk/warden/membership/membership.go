@@ -53,9 +53,8 @@ func (checker *Checker) checkAlreadyRelevantMembershipWarnings() (map[int]bool, 
 	for _, warning := range relevantWarnings {
 		if time.Now().After(warning.FirstWarningTs.Add(warning.GracePeriod)) {
 			expiredWarnings = append(expiredWarnings, warning)
-		} else {
-			alreadyForewarnedUsers[warning.UserID] = true
 		}
+		alreadyForewarnedUsers[warning.UserID] = true
 	}
 
 	var membershipVector api.GroupsIsMemberUserIDsResponse
