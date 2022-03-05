@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"chattweiler/pkg/app/utils"
 	"chattweiler/pkg/repository"
 	"chattweiler/pkg/repository/model/types"
 	"chattweiler/pkg/vk"
@@ -46,14 +47,13 @@ func NewBot(vkToken string, phrasesRepo repository.PhraseRepository, membershipW
 		panic(errors.New("Membership checker initialization: vk.community.id parse failed"))
 	}
 
-	rawMembershipCheckInterval := os.Getenv("chat.warden.membership.check.interval")
-	membershipCheckInterval, err := time.ParseDuration(rawMembershipCheckInterval)
+	membershipCheckInterval, err := time.ParseDuration(utils.GetEnvOrDefault("chat.warden.membership.check.interval", "10m"))
 	if err != nil {
 		fmt.Println(err)
 		panic(errors.New("Membership checker initialization: chat.warden.membership.check.interval parse failed"))
 	}
 
-	gracePeriod, err := time.ParseDuration(os.Getenv("chat.warden.membership.grace.period"))
+	gracePeriod, err := time.ParseDuration(utils.GetEnvOrDefault("chat.warden.membership.grace.period", "1h"))
 	if err != nil {
 		fmt.Println(err)
 		panic(errors.New("Membership checker initialization: chat.warden.membership.grace.period parse failed"))

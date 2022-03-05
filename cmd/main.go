@@ -1,6 +1,7 @@
 package main
 
 import (
+	"chattweiler/pkg/app/utils"
 	"chattweiler/pkg/bot"
 	"chattweiler/pkg/repository/pg"
 	"fmt"
@@ -19,8 +20,7 @@ func main() {
 		return
 	}
 
-	rawPgCacheRefreshInterval := os.Getenv("pg.phrases.cache.refresh.interval")
-	pgCacheRefreshInterval, err := time.ParseDuration(rawPgCacheRefreshInterval)
+	pgCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault("pg.phrases.cache.refresh.interval", "15m"))
 
 	pgCachedPgPhraseRepository := pg.NewCachedPgPhraseRepository(db, pgCacheRefreshInterval)
 	pgMembershipWarningRepository := pg.NewPgMembershipWarningRepository(db)
