@@ -7,13 +7,18 @@ import (
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/api/params"
 	"github.com/SevereCloud/vksdk/v2/object"
+	"github.com/sirupsen/logrus"
 	"strings"
 )
 
 func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phrases []model.Phrase) api.Params {
 	phrase := roulette.Spin(phrases...)
 	if phrase == nil {
-		fmt.Printf("Choosed empty phrase for user\n")
+		logrus.WithFields(logrus.Fields{
+			"package":  "messages",
+			"func":     "BuildMessageUsingPersonalizedPhrase",
+			"fallback": "empty api params",
+		}).Warn("Empty phrases passed in")
 		return api.Params{}
 	}
 
@@ -31,7 +36,11 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 		if phrase.VkAudioId.Valid {
 			builder.Attachment(phrase.VkAudioId.String)
 		} else {
-			fmt.Println("Pharse specified with audio accompaniment, but audio_id doesn't pointed. phrase_id:", phrase.PhraseID)
+			logrus.WithFields(logrus.Fields{
+				"package":   "messages",
+				"func":      "BuildMessageUsingPersonalizedPhrase",
+				"phrase_id": phrase.PhraseID,
+			}).Warn("Pharse specified with audio accompaniment, but audio_id doesn't pointed")
 		}
 	}
 
@@ -41,7 +50,11 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 	phrase := roulette.Spin(phrases...)
 	if phrase == nil {
-		fmt.Printf("Choosed empty phrase\n")
+		logrus.WithFields(logrus.Fields{
+			"package":  "messages",
+			"func":     "BuildMessagePhrase",
+			"fallback": "empty api params",
+		}).Warn("Empty phrases passed in")
 		return api.Params{}
 	}
 
@@ -54,7 +67,11 @@ func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 		if phrase.VkAudioId.Valid {
 			builder.Attachment(phrase.VkAudioId.String)
 		} else {
-			fmt.Println("Pharse specified with audio accompaniment, but audio_id doesn't pointed. phrase_id:", phrase.PhraseID)
+			logrus.WithFields(logrus.Fields{
+				"package":   "messages",
+				"func":      "BuildMessagePhrase",
+				"phrase_id": phrase.PhraseID,
+			}).Warn("Pharse specified with audio accompaniment, but audio_id doesn't pointed")
 		}
 	}
 
