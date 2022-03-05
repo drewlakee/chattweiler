@@ -34,11 +34,11 @@ Chattweiler is a chat bot for Vkontankte. Briefly say, it takes care of the chat
 # Environment Variables
 
 - vk
-  - ```vk.community.bot.token``` (mandatory, type `string`): you cant take it here *vk.com/<your_community>?act=tokens*
-  - ```vk.community.id``` (mandatory, type `int`): it should be an positive integer. You can take it by a click on some post at the community and take it from url, like *vk.com/<your_community>?w=wall-<community_id>_8851*
-  - ```vk.community.chat.id``` (mandatory, type `int`): if you know peerId of a chat then the chat id will be like `peerId - 2000000000` result. Usually, it has a sequence, so if it's your the first chat in the community then chat id should be like 1
+  - ```vk.community.bot.token``` (**mandatory**, type `string`): you cant take it here *vk.com/<your_community>?act=tokens*
+  - ```vk.community.id``` (**mandatory**, type `int`): it should be an positive integer. You can take it by a click on some post at the community and take it from url, like *vk.com/<your_community>?w=wall-<community_id>_8851*
+  - ```vk.community.chat.id``` (**mandatory**, type `int`): if you know peerId of a chat then the chat id will be like `peerId - 2000000000` result. Usually, it has a sequence, so if it's your the first chat in the community then chat id should be like 1
 - pg
-  - ```pg.datasource.string``` (mandatory, type `string`)
+  - ```pg.datasource.string``` (**mandatory**, type `string`)
      - Example, `"host=localhost user=postgres password=postgres sslmode=disable dbname=chattweiler"` or `"postgresql://username:password@host:port/dbname?param1=arg1"`
   - ```pg.phrases.cache.refresh.interval``` (optional, type `time.Duration`, default `15m`): cache refresh interval
 - chat
