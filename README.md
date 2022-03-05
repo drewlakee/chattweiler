@@ -44,6 +44,10 @@ Chattweiler is a chat bot for Vkontankte. Briefly say, it takes care of the chat
 - chat
   - ```chat.warden.membership.check.interval``` (optional, type `time.Duration`, default `10m`): interval, which after the application launch starts an async worker to check a chat for new membership warnings
   - ```chat.warden.membership.grace.period``` (optional, type `time.Duration`, default `1h`): period that the application will assign to new warnings about membership
+- bot
+  - ```bot.functionality.welcome.new.members``` (optional, type `boolean`, default `true`): toggle for new members welcome functions
+  - ```bot.functionality.goodbye.members``` (optional, type `boolean`, default `true`): toggle for goodbye members' leavings functions
+  - ```bot.functionality.membership.checking``` (optional, type `boolean`, default `true`): toggle for membership checking functions 
   
 # How To Run
 

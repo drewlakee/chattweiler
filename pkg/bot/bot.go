@@ -38,25 +38,25 @@ func NewBot(vkToken string, phrasesRepo repository.PhraseRepository, membershipW
 	chatId, err := strconv.ParseInt(os.Getenv("vk.community.chat.id"), 10, 64)
 	if err != nil {
 		fmt.Println(err)
-		panic(errors.New("Membership checker initialization: vk.community.chat.id parse failed"))
+		panic(errors.New("vk.community.chat.id parse failed"))
 	}
 
 	communityId, err := strconv.ParseInt(os.Getenv("vk.community.id"), 10, 64)
 	if err != nil {
 		fmt.Println(err)
-		panic(errors.New("Membership checker initialization: vk.community.id parse failed"))
+		panic(errors.New("vk.community.id parse failed"))
 	}
 
 	membershipCheckInterval, err := time.ParseDuration(utils.GetEnvOrDefault("chat.warden.membership.check.interval", "10m"))
 	if err != nil {
 		fmt.Println(err)
-		panic(errors.New("Membership checker initialization: chat.warden.membership.check.interval parse failed"))
+		panic(errors.New("chat.warden.membership.check.interval parse failed"))
 	}
 
 	gracePeriod, err := time.ParseDuration(utils.GetEnvOrDefault("chat.warden.membership.grace.period", "1h"))
 	if err != nil {
 		fmt.Println(err)
-		panic(errors.New("Membership checker initialization: chat.warden.membership.grace.period parse failed"))
+		panic(errors.New("chat.warden.membership.grace.period parse failed"))
 	}
 
 	return &Bot{
@@ -106,13 +106,29 @@ func (bot *Bot) handleChatUserLeaveEvent(event wrapper.ChatInfoChange) {
 	}
 }
 
-func (bot *Bot) Start() error {
+func (bot *Bot) Start() {
+	welcomeNewMembers, err := strconv.ParseBool(utils.GetEnvOrDefault("bot.functionality.welcome.new.members", "true"))
+	if err != nil {
+		fmt.Println(err)
+		panic(errors.New("bot.functionality.welcome.new.members parse failed"))
+	}
+
+	goodbyeMembers, err := strconv.ParseBool(utils.GetEnvOrDefault("bot.functionality.goodbye.members", "true"))
+	if err != nil {
+		fmt.Println(err)
+		panic(errors.New("membership checker initialization: bot.functionality.goodbye.members parse failed"))
+	}
+
 	bot.vklpwrapper.OnChatInfoChange(func(event wrapper.ChatInfoChange) {
 		switch events.ResolveChatInfoChangeEventType(event) {
 		case vklpwrapper.ChatUserCome:
-			bot.handleChatUserJoinEvent(event)
+			if welcomeNewMembers {
+				bot.handleChatUserJoinEvent(event)
+			}
 		case vklpwrapper.ChatUserLeave:
-			bot.handleChatUserLeaveEvent(event)
+			if goodbyeMembers {
+				bot.handleChatUserLeaveEvent(event)
+			}
 		}
 	})
 
@@ -129,14 +145,20 @@ func (bot *Bot) Start() error {
 		}
 	})
 
-	// run async
-	go bot.membershipChecker.LoopCheck()
-
-	fmt.Println("Bot is running...")
-	err := bot.vklp.Run()
+	checkMembership, err := strconv.ParseBool(utils.GetEnvOrDefault("bot.functionality.membership.checking", "true"))
 	if err != nil {
-		return err
+		fmt.Println(err)
+		panic(errors.New("bot.functionality.membership.checking parse failed"))
 	}
 
-	return nil
+	if checkMembership {
+		// run async
+		go bot.membershipChecker.LoopCheck()
+	}
+
+	fmt.Println("Bot is running...")
+	err = bot.vklp.Run()
+	if err != nil {
+		panic(err)
+	}
 }
