@@ -15,6 +15,8 @@ var packageLogFields = logrus.Fields{
 }
 
 func main() {
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+
 	vkBotToken := utils.GetEnvOrDefault("vk.community.bot.token", "unset")
 	if vkBotToken == "unset" {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
