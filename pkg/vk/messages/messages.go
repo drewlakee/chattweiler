@@ -11,11 +11,14 @@ import (
 	"strings"
 )
 
+var packageLogFields = logrus.Fields{
+	"package": "messages",
+}
+
 func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phrases []model.Phrase) api.Params {
 	phrase := roulette.Spin(phrases...)
 	if phrase == nil {
-		logrus.WithFields(logrus.Fields{
-			"package":  "messages",
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func":     "BuildMessageUsingPersonalizedPhrase",
 			"fallback": "empty api params",
 		}).Warn("Empty phrases passed in")
@@ -36,8 +39,7 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 		if phrase.VkAudioId.Valid {
 			builder.Attachment(phrase.VkAudioId.String)
 		} else {
-			logrus.WithFields(logrus.Fields{
-				"package":   "messages",
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"func":      "BuildMessageUsingPersonalizedPhrase",
 				"phrase_id": phrase.PhraseID,
 			}).Warn("Pharse specified with audio accompaniment, but audio_id doesn't pointed")
@@ -50,8 +52,7 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 	phrase := roulette.Spin(phrases...)
 	if phrase == nil {
-		logrus.WithFields(logrus.Fields{
-			"package":  "messages",
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func":     "BuildMessagePhrase",
 			"fallback": "empty api params",
 		}).Warn("Empty phrases passed in")
@@ -67,8 +68,7 @@ func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 		if phrase.VkAudioId.Valid {
 			builder.Attachment(phrase.VkAudioId.String)
 		} else {
-			logrus.WithFields(logrus.Fields{
-				"package":   "messages",
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"func":      "BuildMessagePhrase",
 				"phrase_id": phrase.PhraseID,
 			}).Warn("Pharse specified with audio accompaniment, but audio_id doesn't pointed")

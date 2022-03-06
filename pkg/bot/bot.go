@@ -8,7 +8,6 @@ import (
 	"chattweiler/pkg/vk/events"
 	"chattweiler/pkg/vk/messages"
 	"chattweiler/pkg/vk/warden/membership"
-	"fmt"
 	"github.com/SevereCloud/vksdk/v2/api"
 	vklp "github.com/SevereCloud/vksdk/v2/longpoll-user"
 	vklpwrapper "github.com/SevereCloud/vksdk/v2/longpoll-user/v3"
@@ -18,6 +17,10 @@ import (
 	"strconv"
 	"time"
 )
+
+var packageLogFields = logrus.Fields{
+	"package": "bot",
+}
 
 type Bot struct {
 	vkapi             *api.VK
@@ -32,46 +35,41 @@ func NewBot(vkToken string, phrasesRepo repository.PhraseRepository, membershipW
 
 	lp, err := vklp.NewLongPoll(vkapi, 0)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package": "bot",
-			"func":    "NewBot",
-			"err":     err,
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+			"err":  err,
 		}).Fatal("long poll initialization error")
 	}
 
 	chatId, err := strconv.ParseInt(os.Getenv("vk.community.chat.id"), 10, 64)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package": "bot",
-			"func":    "NewBot",
-			"err":     err,
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+			"err":  err,
 		}).Fatal("vk.community.chat.id parse failed")
 	}
 
 	communityId, err := strconv.ParseInt(os.Getenv("vk.community.id"), 10, 64)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package": "bot",
-			"func":    "NewBot",
-			"err":     err,
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+			"err":  err,
 		}).Fatal("vk.community.id parse failed")
 	}
 
 	membershipCheckInterval, err := time.ParseDuration(utils.GetEnvOrDefault("chat.warden.membership.check.interval", "10m"))
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package": "bot",
-			"func":    "NewBot",
-			"err":     err,
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+			"err":  err,
 		}).Fatal("chat.warden.membership.check.interval parse failed")
 	}
 
 	gracePeriod, err := time.ParseDuration(utils.GetEnvOrDefault("chat.warden.membership.grace.period", "1h"))
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package": "bot",
-			"func":    "NewBot",
-			"err":     err,
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+			"err":  err,
 		}).Fatal("chat.warden.membership.grace.period parse failed")
 	}
 
@@ -87,12 +85,15 @@ func NewBot(vkToken string, phrasesRepo repository.PhraseRepository, membershipW
 func (bot *Bot) handleChatUserJoinEvent(event wrapper.ChatInfoChange) {
 	user, err := vk.GetUserInfo(bot.vkapi, event)
 	if err != nil {
-		fmt.Println(err)
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "Bot",
+			"func":   "handleChatUserJoinEvent",
+			"err":    err,
+		}).Error("message send error")
 		return
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"package":  "bot",
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 		"struct":   "Bot",
 		"func":     "handleChatUserJoinEvent",
 		"username": user.ScreenName,
@@ -103,11 +104,10 @@ func (bot *Bot) handleChatUserJoinEvent(event wrapper.ChatInfoChange) {
 		bot.phrasesRepo.FindAllByType(types.Welcome),
 	))
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package": "bot",
-			"struct":  "Bot",
-			"func":    "handleChatUserJoinEvent",
-			"err":     err,
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "Bot",
+			"func":   "handleChatUserJoinEvent",
+			"err":    err,
 		}).Error("message send error")
 	}
 }
@@ -115,16 +115,15 @@ func (bot *Bot) handleChatUserJoinEvent(event wrapper.ChatInfoChange) {
 func (bot *Bot) handleChatUserLeaveEvent(event wrapper.ChatInfoChange) {
 	user, err := vk.GetUserInfo(bot.vkapi, event)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package": "bot",
-			"struct":  "Bot",
-			"func":    "handleChatUserLeaveEvent",
-			"err":     err,
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "Bot",
+			"func":   "handleChatUserLeaveEvent",
+			"err":    err,
 		}).Error("vk api error")
+		return
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"package":  "bot",
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 		"struct":   "Bot",
 		"func":     "handleChatUserLeaveEvent",
 		"username": user.ScreenName,
@@ -135,11 +134,10 @@ func (bot *Bot) handleChatUserLeaveEvent(event wrapper.ChatInfoChange) {
 		bot.phrasesRepo.FindAllByType(types.Goodbye),
 	))
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package": "bot",
-			"struct":  "Bot",
-			"func":    "handleChatUserLeaveEvent",
-			"err":     err,
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "Bot",
+			"func":   "handleChatUserLeaveEvent",
+			"err":    err,
 		}).Error("message send error")
 	}
 }
@@ -147,19 +145,17 @@ func (bot *Bot) handleChatUserLeaveEvent(event wrapper.ChatInfoChange) {
 func (bot *Bot) Start() {
 	welcomeNewMembers, err := strconv.ParseBool(utils.GetEnvOrDefault("bot.functionality.welcome.new.members", "true"))
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package": "bot",
-			"func":    "Start",
-			"err":     err,
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "Start",
+			"err":  err,
 		}).Fatal("bot.functionality.welcome.new.members parse error")
 	}
 
 	goodbyeMembers, err := strconv.ParseBool(utils.GetEnvOrDefault("bot.functionality.goodbye.members", "true"))
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package": "bot",
-			"func":    "Start",
-			"err":     err,
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "Start",
+			"err":  err,
 		}).Fatal("bot.functionality.goodbye.members parse error")
 	}
 
@@ -183,10 +179,9 @@ func (bot *Bot) Start() {
 				bot.phrasesRepo.FindAllByType(types.Info),
 			))
 			if err != nil {
-				logrus.WithFields(logrus.Fields{
-					"package": "bot",
-					"func":    "Start",
-					"err":     err,
+				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+					"func": "Start",
+					"err":  err,
 				}).Error("message send error")
 			}
 		}
@@ -194,10 +189,9 @@ func (bot *Bot) Start() {
 
 	checkMembership, err := strconv.ParseBool(utils.GetEnvOrDefault("bot.functionality.membership.checking", "true"))
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package": "bot",
-			"func":    "Start",
-			"err":     err,
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "Start",
+			"err":  err,
 		}).Fatal("bot.functionality.membership.checking parse error")
 	}
 
@@ -206,14 +200,14 @@ func (bot *Bot) Start() {
 		go bot.membershipChecker.LoopCheck()
 	}
 
-	logrus.SetFormatter(&logrus.TextFormatter{DisableColors: true})
-	logrus.Info("Bot is running...")
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"func": "Start",
+	}).Info("Bot is running...")
 	err = bot.vklp.Run()
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package": "bot",
-			"func":    "Start",
-			"err":     err,
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "Start",
+			"err":  err,
 		}).Fatal("bot crashed")
 	}
 }

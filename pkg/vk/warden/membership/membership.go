@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+var packageLogFields = logrus.Fields{
+	"package": "membership",
+}
+
 type Checker struct {
 	// https://dev.vk.com/method/messages.getConversationsById
 	// conversationId = 2000000000 + id, id - chat id
@@ -156,10 +160,9 @@ func (checker *Checker) LoopCheck() {
 			"peer_id": 2000000000 + checker.conversationId,
 		})
 		if err != nil {
-			logrus.WithFields(logrus.Fields{
-				"package": "membership",
-				"func":    "LoopCheck",
-				"err":     err,
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+				"func": "LoopCheck",
+				"err":  err,
 			}).Error()
 			successfulCheckAttempt = false
 			continue
@@ -168,10 +171,9 @@ func (checker *Checker) LoopCheck() {
 		members := filterOnlyCommonMembers(conversationMembers)
 		alreadyForewarnedUsers, err := checker.checkAlreadyRelevantMembershipWarnings(members)
 		if err != nil {
-			logrus.WithFields(logrus.Fields{
-				"package": "membership",
-				"func":    "LoopCheck",
-				"err":     err,
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+				"func": "LoopCheck",
+				"err":  err,
 			}).Error()
 			successfulCheckAttempt = false
 			continue
@@ -179,10 +181,9 @@ func (checker *Checker) LoopCheck() {
 
 		err = checker.checkChatForNewWarning(members, alreadyForewarnedUsers)
 		if err != nil {
-			logrus.WithFields(logrus.Fields{
-				"package": "membership",
-				"func":    "LoopCheck",
-				"err":     err,
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+				"func": "LoopCheck",
+				"err":  err,
 			}).Error()
 			successfulCheckAttempt = false
 			continue

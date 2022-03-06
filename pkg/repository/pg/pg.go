@@ -11,6 +11,10 @@ import (
 	"unsafe"
 )
 
+var packageLogFields = logrus.Fields{
+	"package": "pg",
+}
+
 type CachedPgPhraseRepository struct {
 	db                   *sqlx.DB
 	cacheRefreshInterval time.Duration
@@ -52,8 +56,7 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phra
 	var updatedPhrases []model.Phrase
 	err := cachedPgPhraseRepository.db.Select(&updatedPhrases, query)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package":  "pg",
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct":   "CachedPgPhraseRepository",
 			"func":     "FindAll",
 			"err":      err,
@@ -104,13 +107,12 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) Insert(warni
 	)
 
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package": "pg",
-			"struct":  "PgMembershipWarningRepository",
-			"func":    "Insert",
-			"err":     err,
-			"query":   insert,
-			"params":  warning,
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "PgMembershipWarningRepository",
+			"func":   "Insert",
+			"err":    err,
+			"query":  insert,
+			"params": warning,
 		}).Error()
 		return false
 	}
@@ -126,12 +128,11 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToU
 
 	tx, err := pgMembershipWarningRepository.db.Begin()
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package": "pg",
-			"struct":  "PgMembershipWarningRepository",
-			"func":    "UpdateAllToUnRelevant",
-			"err":     err,
-			"query":   update,
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "PgMembershipWarningRepository",
+			"func":   "UpdateAllToUnRelevant",
+			"err":    err,
+			"query":  update,
 		}).Error()
 		return false
 	}
@@ -139,13 +140,12 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToU
 	for _, warning := range warnings {
 		_, err := tx.Exec(update, warning.WarningID)
 		if err != nil {
-			logrus.WithFields(logrus.Fields{
-				"package": "pg",
-				"struct":  "PgMembershipWarningRepository",
-				"func":    "UpdateAllToUnRelevant",
-				"err":     err,
-				"query":   update,
-				"param":   warning,
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+				"struct": "PgMembershipWarningRepository",
+				"func":   "UpdateAllToUnRelevant",
+				"err":    err,
+				"query":  update,
+				"param":  warning,
 			}).Error()
 			tx.Rollback()
 			return false
@@ -154,12 +154,11 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToU
 
 	err = tx.Commit()
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package": "pg",
-			"struct":  "PgMembershipWarningRepository",
-			"func":    "UpdateAllToUnRelevant",
-			"err":     err,
-			"query":   update,
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "PgMembershipWarningRepository",
+			"func":   "UpdateAllToUnRelevant",
+			"err":    err,
+			"query":  update,
 		}).Error()
 		tx.Rollback()
 		return false
@@ -176,8 +175,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAll() []
 	var warnings []model.MembershipWarning
 	err := pgMembershipWarningRepository.db.Select(&warnings, query)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package":  "pg",
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct":   "PgMembershipWarningRepository",
 			"func":     "FindAll",
 			"err":      err,
@@ -199,8 +197,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAllRelev
 	var warnings []model.MembershipWarning
 	err := pgMembershipWarningRepository.db.Select(&warnings, query)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"package":  "pg",
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct":   "PgMembershipWarningRepository",
 			"func":     "FindAllRelevant",
 			"err":      err,
