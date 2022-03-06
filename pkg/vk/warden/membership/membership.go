@@ -5,13 +5,17 @@ import (
 	"chattweiler/pkg/repository/model"
 	"chattweiler/pkg/repository/model/types"
 	"chattweiler/pkg/vk/messages"
-	"fmt"
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/api/params"
 	"github.com/SevereCloud/vksdk/v2/object"
+	"github.com/sirupsen/logrus"
 	"strconv"
 	"time"
 )
+
+var packageLogFields = logrus.Fields{
+	"package": "membership",
+}
 
 type Checker struct {
 	// https://dev.vk.com/method/messages.getConversationsById
@@ -105,7 +109,6 @@ func (checker *Checker) checkChatForNewWarning(members map[int]object.UsersUser,
 		index++
 	}
 	if len(members) == 0 {
-		fmt.Println("No one in the conversation except the community")
 		return nil
 	}
 
@@ -157,7 +160,10 @@ func (checker *Checker) LoopCheck() {
 			"peer_id": 2000000000 + checker.conversationId,
 		})
 		if err != nil {
-			fmt.Println(err)
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+				"func": "LoopCheck",
+				"err":  err,
+			}).Error()
 			successfulCheckAttempt = false
 			continue
 		}
@@ -165,14 +171,20 @@ func (checker *Checker) LoopCheck() {
 		members := filterOnlyCommonMembers(conversationMembers)
 		alreadyForewarnedUsers, err := checker.checkAlreadyRelevantMembershipWarnings(members)
 		if err != nil {
-			fmt.Println(err)
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+				"func": "LoopCheck",
+				"err":  err,
+			}).Error()
 			successfulCheckAttempt = false
 			continue
 		}
 
 		err = checker.checkChatForNewWarning(members, alreadyForewarnedUsers)
 		if err != nil {
-			fmt.Println(err)
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+				"func": "LoopCheck",
+				"err":  err,
+			}).Error()
 			successfulCheckAttempt = false
 			continue
 		}

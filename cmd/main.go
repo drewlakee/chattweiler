@@ -1,34 +1,53 @@
 package main
 
 import (
+	"chattweiler/pkg/app/utils"
 	"chattweiler/pkg/bot"
 	"chattweiler/pkg/repository/pg"
-	"fmt"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"os"
+	"github.com/sirupsen/logrus"
 	"time"
 )
 
+var packageLogFields = logrus.Fields{
+	"package": "main",
+}
+
 func main() {
-	vkBotToken := os.Getenv("vk.community.bot.token")
-	pgDataSourceString := os.Getenv("pg.datasource.string")
-	db, err := sqlx.Connect("postgres", pgDataSourceString)
-	if err != nil {
-		fmt.Println(err)
-		return
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+
+	vkBotToken := utils.GetEnvOrDefault("vk.community.bot.token", "unset")
+	if vkBotToken == "unset" {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "main",
+		}).Fatal("vk.community.bot.token is unset")
 	}
 
-	rawPgCacheRefreshInterval := os.Getenv("pg.phrases.cache.refresh.interval")
-	pgCacheRefreshInterval, err := time.ParseDuration(rawPgCacheRefreshInterval)
+	pgDataSourceString := utils.GetEnvOrDefault("pg.datasource.string", "unset")
+	if pgDataSourceString == "unset" {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "main",
+		}).Fatal("pg.datasource.string is unset")
+	}
+
+	db, err := sqlx.Connect("postgres", pgDataSourceString)
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "main",
+			"err":  err,
+		}).Fatal("Postgres connection error")
+	}
+
+	pgCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault("pg.phrases.cache.refresh.interval", "15m"))
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "main",
+			"err":  err,
+		}).Fatal("pg.phrases.cache.refresh.interval parse error")
+	}
 
 	pgCachedPgPhraseRepository := pg.NewCachedPgPhraseRepository(db, pgCacheRefreshInterval)
 	pgMembershipWarningRepository := pg.NewPgMembershipWarningRepository(db)
-
-	worker := bot.NewBot(vkBotToken, pgCachedPgPhraseRepository, pgMembershipWarningRepository)
-
-	err = worker.Start()
-	if err != nil {
-		fmt.Println(err)
-	}
+	bot.NewBot(vkBotToken, pgCachedPgPhraseRepository, pgMembershipWarningRepository).Start()
 }

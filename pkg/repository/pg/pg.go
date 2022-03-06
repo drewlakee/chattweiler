@@ -3,13 +3,17 @@ package pg
 import (
 	"chattweiler/pkg/repository/model"
 	"chattweiler/pkg/repository/model/types"
-	"fmt"
 	"github.com/jmoiron/sqlx"
+	"github.com/sirupsen/logrus"
 	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
 )
+
+var packageLogFields = logrus.Fields{
+	"package": "pg",
+}
 
 type CachedPgPhraseRepository struct {
 	db                   *sqlx.DB
@@ -52,7 +56,13 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phra
 	var updatedPhrases []model.Phrase
 	err := cachedPgPhraseRepository.db.Select(&updatedPhrases, query)
 	if err != nil {
-		fmt.Printf("Error: %s, Query: %s\n", err.Error(), query)
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct":   "CachedPgPhraseRepository",
+			"func":     "FindAll",
+			"err":      err,
+			"query":    query,
+			"fallback": "empty list",
+		}).Error()
 		return []model.Phrase{}
 	}
 
@@ -97,7 +107,13 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) Insert(warni
 	)
 
 	if err != nil {
-		fmt.Printf("Error: %s, Insert: %s, Params: %v\n", err.Error(), insert, warning)
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "PgMembershipWarningRepository",
+			"func":   "Insert",
+			"err":    err,
+			"query":  insert,
+			"params": warning,
+		}).Error()
 		return false
 	}
 
@@ -112,14 +128,25 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToU
 
 	tx, err := pgMembershipWarningRepository.db.Begin()
 	if err != nil {
-		fmt.Printf("Error: %s, Update: %s\n", err.Error(), update)
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "PgMembershipWarningRepository",
+			"func":   "UpdateAllToUnRelevant",
+			"err":    err,
+			"query":  update,
+		}).Error()
 		return false
 	}
 
 	for _, warning := range warnings {
 		_, err := tx.Exec(update, warning.WarningID)
 		if err != nil {
-			fmt.Printf("Error: %s, Update: %s, Params: %v\n", err.Error(), update, warning)
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+				"struct": "PgMembershipWarningRepository",
+				"func":   "UpdateAllToUnRelevant",
+				"err":    err,
+				"query":  update,
+				"param":  warning,
+			}).Error()
 			tx.Rollback()
 			return false
 		}
@@ -127,7 +154,12 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToU
 
 	err = tx.Commit()
 	if err != nil {
-		fmt.Printf("Error: %s, Update: %s\n", err.Error(), update)
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "PgMembershipWarningRepository",
+			"func":   "UpdateAllToUnRelevant",
+			"err":    err,
+			"query":  update,
+		}).Error()
 		tx.Rollback()
 		return false
 	}
@@ -143,7 +175,13 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAll() []
 	var warnings []model.MembershipWarning
 	err := pgMembershipWarningRepository.db.Select(&warnings, query)
 	if err != nil {
-		fmt.Printf("Error: %s, Query: %s\n", err.Error(), query)
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct":   "PgMembershipWarningRepository",
+			"func":     "FindAll",
+			"err":      err,
+			"query":    query,
+			"fallback": "empty list",
+		}).Error()
 		return []model.MembershipWarning{}
 	}
 
@@ -159,7 +197,13 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAllRelev
 	var warnings []model.MembershipWarning
 	err := pgMembershipWarningRepository.db.Select(&warnings, query)
 	if err != nil {
-		fmt.Printf("Error: %s, Query: %s\n", err.Error(), query)
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct":   "PgMembershipWarningRepository",
+			"func":     "FindAllRelevant",
+			"err":      err,
+			"query":    query,
+			"fallback": "empty list",
+		}).Error()
 		return []model.MembershipWarning{}
 	}
 
