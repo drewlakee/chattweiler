@@ -209,3 +209,66 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAllRelev
 
 	return warnings
 }
+
+type CachedPgContentSourceRepository struct {
+	db                   *sqlx.DB
+	cacheRefreshInterval time.Duration
+	lastCacheRefresh     time.Time
+	refreshMutex         sync.Mutex
+	contentSources       []model.ContentSource
+}
+
+func NewCachedPgContentSourceRepository(db *sqlx.DB, cacheRefreshInterval time.Duration) *CachedPgContentSourceRepository {
+	return &CachedPgContentSourceRepository{
+		db:                   db,
+		cacheRefreshInterval: cacheRefreshInterval,
+		lastCacheRefresh:     time.Now(),
+		contentSources:       nil,
+	}
+}
+
+func (cachedPgContentSourceRepository *CachedPgContentSourceRepository) FindAll() []model.ContentSource {
+	if time.Now().Before(cachedPgContentSourceRepository.lastCacheRefresh.Add(cachedPgContentSourceRepository.cacheRefreshInterval)) {
+		// atomic content sources read
+		contentSourcesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&cachedPgContentSourceRepository.contentSources)))
+		if contentSourcesPtr != nil {
+			contentSources := *(*[]model.ContentSource)(contentSourcesPtr)
+			if len(contentSources) != 0 {
+				return contentSources
+			}
+		}
+	}
+
+	// cache refresh lock
+	cachedPgContentSourceRepository.refreshMutex.Lock()
+	defer cachedPgContentSourceRepository.refreshMutex.Unlock()
+
+	query :=
+		"SELECT source_id, vk_community_id, st.name AS source_type " +
+			"FROM content_source AS cs, source_type AS st " +
+			"WHERE cs.type = st.source_type_id "
+
+	var updatedContentSources []model.ContentSource
+	err := cachedPgContentSourceRepository.db.Select(&updatedContentSources, query)
+	if err != nil {
+		fmt.Printf("Error: %s, Query: %s\n", err.Error(), query)
+		return []model.ContentSource{}
+	}
+
+	// atomic content source write
+	updatedUpdatedContentSourcesPtr := unsafe.Pointer(&updatedContentSources)
+	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&cachedPgContentSourceRepository.contentSources)), updatedUpdatedContentSourcesPtr)
+
+	cachedPgContentSourceRepository.lastCacheRefresh = time.Now()
+	return updatedContentSources
+}
+
+func (cachedPgContentSourceRepository *CachedPgContentSourceRepository) FindAllByType(sourceType types.ContentSourceType) []model.ContentSource {
+	var contentSources []model.ContentSource
+	for _, contentSource := range cachedPgContentSourceRepository.FindAll() {
+		if sourceType == contentSource.SourceType {
+			contentSources = append(contentSources, contentSource)
+		}
+	}
+	return contentSources
+}

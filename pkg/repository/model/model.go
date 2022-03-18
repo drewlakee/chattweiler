@@ -24,3 +24,9 @@ type MembershipWarning struct {
 	GracePeriod    time.Duration `db:"grace_period_ns"`
 	IsRelevant     bool          `db:"is_relevant"`
 }
+
+type ContentSource struct {
+	SourceID      int                     `db:"source_id"`
+	VkCommunityID string                  `db:"vk_community_id"`
+	SourceType    types.ContentSourceType `db:"source_type"`
+}

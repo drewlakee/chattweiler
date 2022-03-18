@@ -16,3 +16,8 @@ type MembershipWarningRepository interface {
 	FindAll() []model.MembershipWarning
 	FindAllRelevant() []model.MembershipWarning
 }
+
+type ContentSourceRepository interface {
+	FindAll() []model.ContentSource
+	FindAllByType(sourceType types.ContentSourceType) []model.ContentSource
+}

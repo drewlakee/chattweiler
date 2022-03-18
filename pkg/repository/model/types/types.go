@@ -8,3 +8,9 @@ const (
 	MembershipWarning PhraseType = "membership_warning"
 	Info              PhraseType = "info"
 )
+
+type ContentSourceType string
+
+const (
+	Audio ContentSourceType = "audio"
+)

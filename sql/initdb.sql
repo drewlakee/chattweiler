@@ -54,3 +54,23 @@ ALTER TABLE ONLY phrase
 
 ALTER TABLE ONLY phrase
     ADD CONSTRAINT phrase FOREIGN KEY (type) REFERENCES phrase_type(type_id);
+
+CREATE TABLE source_type (
+     source_type_id integer NOT NULL,
+     name name NOT NULL
+);
+
+ALTER TABLE ONLY source_type
+    ADD CONSTRAINT source_type_pkey PRIMARY KEY (source_type_id);
+
+CREATE TABLE content_source (
+    source_id integer NOT NULL,
+    vk_community_id character varying(64) NOT NULL,
+    type integer NOT NULL
+);
+
+ALTER TABLE ONLY content_source
+    ADD CONSTRAINT content_source_pkey PRIMARY KEY (source_id);
+
+ALTER TABLE ONLY content_source
+    ADD CONSTRAINT content_source FOREIGN KEY (type) REFERENCES source_type(source_type_id);
