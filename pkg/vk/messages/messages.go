@@ -1,6 +1,7 @@
 package messages
 
 import (
+	"chattweiler/pkg/app/utils"
 	"chattweiler/pkg/repository/model"
 	"chattweiler/pkg/roulette"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"github.com/SevereCloud/vksdk/v2/api/params"
 	"github.com/SevereCloud/vksdk/v2/object"
 	"github.com/sirupsen/logrus"
+	"strconv"
 	"strings"
 )
 
@@ -29,8 +31,19 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 	builder.PeerID(peerId)
 	builder.RandomID(0)
 
+	useFirstNameInsteadUsername, err := strconv.ParseBool(utils.GetEnvOrDefault("chat.use.first.name.instead.username", "false"))
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "BuildMessageUsingPersonalizedPhrase",
+		}).Error("chat.use.first.name.instead.username parse error")
+	}
+
 	if phrase.IsUserTemplated {
-		builder.Message(strings.ReplaceAll(phrase.Text, "%username%", "@"+user.ScreenName))
+		if useFirstNameInsteadUsername {
+			builder.Message(strings.ReplaceAll(phrase.Text, "%username%", fmt.Sprintf("@%s (%s)", user.ScreenName, user.FirstName)))
+		} else {
+			builder.Message(strings.ReplaceAll(phrase.Text, "%username%", "@"+user.ScreenName))
+		}
 	} else {
 		builder.Message(fmt.Sprintf("%s, \n\n%s", "@"+user.ScreenName, phrase.Text))
 	}
