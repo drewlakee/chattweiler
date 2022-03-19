@@ -172,11 +172,18 @@ func (bot *Bot) Start() {
 		go bot.audioContentCourier.ReceiveAndDeliver(types.AudioRequest, content.Audio, bot.audioContentCourierChannel)
 	}
 
+	overriddenInfoCommand := utils.GetEnvOrDefault("bot.command.override.info", string(Info))
+	overriddenAudioRequestCommand := utils.GetEnvOrDefault("bot.command.override.audio.request", string(AudioRequest))
+
 	bot.vklpwrapper.OnNewMessage(func(event wrapper.NewMessage) {
 		switch event.Text {
 		case string(Info):
+			fallthrough
+		case overriddenInfoCommand:
 			bot.handleInfoCommand(event)
 		case string(AudioRequest):
+			fallthrough
+		case overriddenAudioRequestCommand:
 			if audioRequests {
 				bot.handleAudioRequestCommand(event)
 			}
