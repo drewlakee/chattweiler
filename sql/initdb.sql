@@ -1,3 +1,7 @@
+--
+-- Initial SQL scripts for schemas which the application uses
+--
+
 CREATE TABLE membership_warning (
     warning_id integer NOT NULL,
     user_id bigint NOT NULL,
@@ -69,8 +73,31 @@ CREATE TABLE content_source (
     type integer NOT NULL
 );
 
+ALTER TABLE content_source ALTER COLUMN source_id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME content_source_source_id_seq
+        START WITH 1
+        INCREMENT BY 1
+        NO MINVALUE
+        NO MAXVALUE
+        CACHE 1
+    );
+
 ALTER TABLE ONLY content_source
     ADD CONSTRAINT content_source_pkey PRIMARY KEY (source_id);
 
 ALTER TABLE ONLY content_source
     ADD CONSTRAINT content_source FOREIGN KEY (type) REFERENCES source_type(source_type_id);
+
+--
+-- Initial SQL scripts for needed data which the application uses to work by default
+--
+
+-- Used phrase types in the application
+INSERT INTO phrase_type (type_id, name)  VALUES (1, 'welcome');
+INSERT INTO phrase_type (type_id, name)  VALUES (2, 'goodbye');
+INSERT INTO phrase_type (type_id, name)  VALUES (3, 'membership_warning');
+INSERT INTO phrase_type (type_id, name)  VALUES (4, 'info');
+INSERT INTO phrase_type (type_id, name)  VALUES (5, 'audio_request');
+
+-- Used content source types in the application
+INSERT INTO source_type (source_type_id, name)  VALUES (1, 'audio');

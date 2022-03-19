@@ -251,7 +251,13 @@ func (cachedPgContentSourceRepository *CachedPgContentSourceRepository) FindAll(
 	var updatedContentSources []model.ContentSource
 	err := cachedPgContentSourceRepository.db.Select(&updatedContentSources, query)
 	if err != nil {
-		fmt.Printf("Error: %s, Query: %s\n", err.Error(), query)
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct":   "CachedPgContentSourceRepository",
+			"func":     "FindAll",
+			"err":      err,
+			"query":    query,
+			"fallback": "empty list",
+		}).Error()
 		return []model.ContentSource{}
 	}
 

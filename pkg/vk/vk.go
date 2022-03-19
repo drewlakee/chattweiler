@@ -4,13 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/SevereCloud/vksdk/v2/api"
-	wrapper "github.com/SevereCloud/vksdk/v2/longpoll-user/v3"
 	"github.com/SevereCloud/vksdk/v2/object"
 )
 
-func GetUserInfo(vkapi *api.VK, event wrapper.ChatInfoChange) (*object.UsersUser, error) {
+func GetUserInfo(vkapi *api.VK, userID string) (*object.UsersUser, error) {
 	users, err := vkapi.UsersGet(api.Params{
-		"user_ids": event.Info,
+		"user_ids": userID,
 		"fields":   "screen_name",
 	})
 
@@ -19,7 +18,7 @@ func GetUserInfo(vkapi *api.VK, event wrapper.ChatInfoChange) (*object.UsersUser
 	}
 
 	if len(users) == 0 {
-		return nil, errors.New(fmt.Sprintf("User with id %d not found", event.Info))
+		return nil, errors.New(fmt.Sprintf("User with id %d not found", userID))
 	}
 
 	return &users[0], err

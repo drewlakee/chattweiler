@@ -21,7 +21,7 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func":     "BuildMessageUsingPersonalizedPhrase",
 			"fallback": "empty api params",
-		}).Warn("Empty phrases passed in")
+		}).Warn("empty phrases passed")
 		return api.Params{}
 	}
 
@@ -42,7 +42,7 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"func":      "BuildMessageUsingPersonalizedPhrase",
 				"phrase_id": phrase.PhraseID,
-			}).Warn("Pharse specified with audio accompaniment, but audio_id doesn't pointed")
+			}).Warn("phrase is specified with audio accompaniment, but audio_id doesn't pointed")
 		}
 	}
 
@@ -55,7 +55,7 @@ func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func":     "BuildMessagePhrase",
 			"fallback": "empty api params",
-		}).Warn("Empty phrases passed in")
+		}).Warn("empty phrases passed in")
 		return api.Params{}
 	}
 
@@ -71,7 +71,7 @@ func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"func":      "BuildMessagePhrase",
 				"phrase_id": phrase.PhraseID,
-			}).Warn("Pharse specified with audio accompaniment, but audio_id doesn't pointed")
+			}).Warn("pharse specified with audio accompaniment, but audio_id doesn't pointed")
 		}
 	}
 
