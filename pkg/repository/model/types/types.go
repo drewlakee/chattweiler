@@ -8,10 +8,12 @@ const (
 	MembershipWarning PhraseType = "membership_warning"
 	Info              PhraseType = "info"
 	AudioRequest      PhraseType = "audio_request"
+	PictureRequest    PhraseType = "picture_request"
 )
 
 type ContentSourceType string
 
 const (
-	Audio ContentSourceType = "audio"
+	Audio   ContentSourceType = "audio"
+	Picture ContentSourceType = "picture"
 )

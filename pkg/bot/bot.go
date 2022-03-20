@@ -28,18 +28,21 @@ var packageLogFields = logrus.Fields{
 type BotCommand string
 
 const (
-	Info         BotCommand = "bark!"
-	AudioRequest BotCommand = "sing song!"
+	Info           BotCommand = "bark!"
+	AudioRequest   BotCommand = "sing song!"
+	PictureRequest BotCommand = "gimme pic!"
 )
 
 type Bot struct {
-	vkapi                      *api.VK
-	vklp                       *vklp.LongPoll
-	vklpwrapper                *wrapper.Wrapper
-	phrasesRepo                repository.PhraseRepository
-	membershipChecker          *membership.Checker
-	audioContentCourier        *courier.MediaContentCourier
-	audioContentCourierChannel chan wrapper.NewMessage
+	vkapi                        *api.VK
+	vklp                         *vklp.LongPoll
+	vklpwrapper                  *wrapper.Wrapper
+	phrasesRepo                  repository.PhraseRepository
+	membershipChecker            *membership.Checker
+	audioContentCourier          *courier.MediaContentCourier
+	audioContentCourierChannel   chan wrapper.NewMessage
+	pictureContentCourier        *courier.MediaContentCourier
+	pictureContentCourierChannel chan wrapper.NewMessage
 }
 
 func NewBot(
@@ -92,7 +95,7 @@ func NewBot(
 	}
 
 	vkUserApi := api.NewVK(utils.GetEnvOrDefault("vk.admin.user.token", ""))
-	maxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault("content.audio.max.cached.attachments", "100"), 10, 32)
+	audioMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault("content.audio.max.cached.attachments", "100"), 10, 32)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
@@ -100,7 +103,7 @@ func NewBot(
 		}).Fatal("content.audio.max.cached.attachments parse failed")
 	}
 
-	cacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault("content.audio.cache.refresh.threshold", "0.2"), 32)
+	audioCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault("content.audio.cache.refresh.threshold", "0.2"), 32)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
@@ -108,7 +111,7 @@ func NewBot(
 		}).Fatal("content.audio.cache.refresh.threshold parse failed")
 	}
 
-	audioCollector := random.NewCachedRandomAttachmentsContentCollector(vkUserApi, content.Audio, contentSourceRepo, int(maxCachedAttachments), float32(cacheRefreshThreshold))
+	audioCollector := random.NewCachedRandomAttachmentsContentCollector(vkUserApi, content.Audio, contentSourceRepo, int(audioMaxCachedAttachments), float32(audioCacheRefreshThreshold))
 
 	audioQueueSize, err := strconv.ParseInt(utils.GetEnvOrDefault("content.audio.queue.size", "100"), 10, 32)
 	if err != nil {
@@ -118,14 +121,42 @@ func NewBot(
 		}).Fatal("content.audio.queue.size parse failed")
 	}
 
+	pictureQueueSize, err := strconv.ParseInt(utils.GetEnvOrDefault("content.picture.queue.size", "100"), 10, 32)
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+			"err":  err,
+		}).Fatal("content.picture.queue.size parse failed")
+	}
+
+	pictureMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault("content.picture.max.cached.attachments", "100"), 10, 32)
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+			"err":  err,
+		}).Fatal("content.picture.max.cached.attachments parse failed")
+	}
+
+	pictureCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault("content.picture.cache.refresh.threshold", "0.2"), 32)
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+			"err":  err,
+		}).Fatal("content.picture.cache.refresh.threshold parse failed")
+	}
+
+	pictureCollector := random.NewCachedRandomAttachmentsContentCollector(vkUserApi, content.Photo, contentSourceRepo, int(pictureMaxCachedAttachments), float32(pictureCacheRefreshThreshold))
+
 	return &Bot{
-		vkapi:                      communityVkApi,
-		vklp:                       lp,
-		vklpwrapper:                vklpwrapper.NewWrapper(lp),
-		phrasesRepo:                phrasesRepo,
-		membershipChecker:          membership.NewChecker(chatId, communityId, membershipCheckInterval, gracePeriod, communityVkApi, phrasesRepo, membershipWarningsRepo),
-		audioContentCourier:        courier.NewMediaContentCourier(communityVkApi, vkUserApi, audioCollector, phrasesRepo),
-		audioContentCourierChannel: make(chan wrapper.NewMessage, audioQueueSize),
+		vkapi:                        communityVkApi,
+		vklp:                         lp,
+		vklpwrapper:                  vklpwrapper.NewWrapper(lp),
+		phrasesRepo:                  phrasesRepo,
+		membershipChecker:            membership.NewChecker(chatId, communityId, membershipCheckInterval, gracePeriod, communityVkApi, phrasesRepo, membershipWarningsRepo),
+		audioContentCourier:          courier.NewMediaContentCourier(communityVkApi, vkUserApi, audioCollector, phrasesRepo),
+		audioContentCourierChannel:   make(chan wrapper.NewMessage, audioQueueSize),
+		pictureContentCourier:        courier.NewMediaContentCourier(communityVkApi, vkUserApi, pictureCollector, phrasesRepo),
+		pictureContentCourierChannel: make(chan wrapper.NewMessage, pictureQueueSize),
 	}
 }
 
@@ -172,20 +203,34 @@ func (bot *Bot) Start() {
 		go bot.audioContentCourier.ReceiveAndDeliver(types.AudioRequest, content.Audio, bot.audioContentCourierChannel)
 	}
 
-	overriddenInfoCommand := utils.GetEnvOrDefault("bot.command.override.info", string(Info))
-	overriddenAudioRequestCommand := utils.GetEnvOrDefault("bot.command.override.audio.request", string(AudioRequest))
+	pictureRequests, err := strconv.ParseBool(utils.GetEnvOrDefault("bot.functionality.picture.requests", "false"))
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "Start",
+			"err":  err,
+		}).Fatal("bot.functionality.picture.requests parse error")
+	}
+
+	if pictureRequests {
+		// run async
+		go bot.pictureContentCourier.ReceiveAndDeliver(types.PictureRequest, content.Photo, bot.pictureContentCourierChannel)
+	}
+
+	infoCommand := utils.GetEnvOrDefault("bot.command.override.info", string(Info))
+	audioRequestCommand := utils.GetEnvOrDefault("bot.command.override.audio.request", string(AudioRequest))
+	pictureRequestCommand := utils.GetEnvOrDefault("bot.command.override.picture.request", string(PictureRequest))
 
 	bot.vklpwrapper.OnNewMessage(func(event wrapper.NewMessage) {
 		switch event.Text {
-		case string(Info):
-			fallthrough
-		case overriddenInfoCommand:
+		case infoCommand:
 			bot.handleInfoCommand(event)
-		case string(AudioRequest):
-			fallthrough
-		case overriddenAudioRequestCommand:
+		case audioRequestCommand:
 			if audioRequests {
 				bot.handleAudioRequestCommand(event)
+			}
+		case pictureRequestCommand:
+			if pictureRequests {
+				bot.handlePictureRequestCommand(event)
 			}
 		}
 	})
@@ -312,4 +357,8 @@ func (bot *Bot) handleInfoCommand(event wrapper.NewMessage) {
 
 func (bot *Bot) handleAudioRequestCommand(audioRequest wrapper.NewMessage) {
 	bot.audioContentCourierChannel <- audioRequest
+}
+
+func (bot *Bot) handlePictureRequestCommand(pictureRequest wrapper.NewMessage) {
+	bot.pictureContentCourierChannel <- pictureRequest
 }

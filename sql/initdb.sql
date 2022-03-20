@@ -98,6 +98,8 @@ INSERT INTO phrase_type (type_id, name)  VALUES (2, 'goodbye');
 INSERT INTO phrase_type (type_id, name)  VALUES (3, 'membership_warning');
 INSERT INTO phrase_type (type_id, name)  VALUES (4, 'info');
 INSERT INTO phrase_type (type_id, name)  VALUES (5, 'audio_request');
+INSERT INTO phrase_type (type_id, name)  VALUES (6, 'picture_request');
 
 -- Used content source types in the application
 INSERT INTO source_type (source_type_id, name)  VALUES (1, 'audio');
+INSERT INTO source_type (source_type_id, name)  VALUES (2, 'picture');

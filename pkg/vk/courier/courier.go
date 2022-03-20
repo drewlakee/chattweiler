@@ -10,7 +10,6 @@ import (
 	lpwrapper "github.com/SevereCloud/vksdk/v2/longpoll-user/v3"
 	"github.com/SevereCloud/vksdk/v2/object"
 	"github.com/sirupsen/logrus"
-	"strconv"
 )
 
 var packageLogFields = logrus.Fields{
@@ -93,7 +92,9 @@ func (courier *MediaContentCourier) ReceiveAndDeliver(deliverPhraseType types.Ph
 func (courier *MediaContentCourier) resolveContentID(mediaContent object.WallWallpostAttachment, deliverContentType content.AttachmentsType) string {
 	switch deliverContentType {
 	case content.Audio:
-		return "audio" + strconv.Itoa(mediaContent.Audio.OwnerID) + "_" + strconv.Itoa(mediaContent.Audio.ID)
+		return mediaContent.Audio.ToAttachment()
+	case content.Photo:
+		return mediaContent.Photo.ToAttachment()
 	}
 
 	return ""

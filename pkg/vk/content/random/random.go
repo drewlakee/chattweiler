@@ -158,6 +158,8 @@ func (collector *CachedRandomAttachmentsContentCollector) getRandomSource() mode
 	switch collector.attachmentsType {
 	case content.Audio:
 		contentSources = collector.contentSourceRepo.FindAllByType(types.Audio)
+	case content.Photo:
+		contentSources = collector.contentSourceRepo.FindAllByType(types.Picture)
 	default:
 		contentSources = []model.ContentSource{}
 	}

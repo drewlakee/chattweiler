@@ -6,6 +6,7 @@ type AttachmentsType string
 
 const (
 	Audio AttachmentsType = "audio"
+	Photo AttachmentsType = "photo"
 )
 
 type AttachmentsContentCollector interface {
