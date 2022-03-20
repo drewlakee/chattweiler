@@ -220,6 +220,19 @@ func (bot *Bot) Start() {
 	audioRequestCommand := utils.GetEnvOrDefault("bot.command.override.audio.request", string(AudioRequest))
 	pictureRequestCommand := utils.GetEnvOrDefault("bot.command.override.picture.request", string(PictureRequest))
 
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"func":      "Start",
+		"call_name": infoCommand,
+	}).Info("info command")
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"func":      "Start",
+		"call_name": audioRequestCommand,
+	}).Info("audio request command")
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"func":      "Start",
+		"call_name": pictureRequestCommand,
+	}).Info("picture request command")
+
 	bot.vklpwrapper.OnNewMessage(func(event wrapper.NewMessage) {
 		switch event.Text {
 		case infoCommand:
