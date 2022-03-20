@@ -224,14 +224,20 @@ func (bot *Bot) Start() {
 		"func":      "Start",
 		"call_name": infoCommand,
 	}).Info("info command")
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"func":      "Start",
-		"call_name": audioRequestCommand,
-	}).Info("audio request command")
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"func":      "Start",
-		"call_name": pictureRequestCommand,
-	}).Info("picture request command")
+
+	if audioRequests {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func":      "Start",
+			"call_name": audioRequestCommand,
+		}).Info("audio request command")
+	}
+
+	if pictureRequests {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func":      "Start",
+			"call_name": pictureRequestCommand,
+		}).Info("picture request command")
+	}
 
 	bot.vklpwrapper.OnNewMessage(func(event wrapper.NewMessage) {
 		switch event.Text {
