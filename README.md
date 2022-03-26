@@ -27,7 +27,7 @@ Chattweiler is a chat bot for Vkontankte. Briefly say, it takes care of a chat.
 </details>
 
 <details>
-   <summary><b>Can find a random content and bring to a chat: for example, a picture or an audio from sources which you will specify</b></summary><br>
+   <summary><b>Can send a random content to a chat</b></summary><br>
    
    The commands' names could be overridden. See "Configurations" for details
    
