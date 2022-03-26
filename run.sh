@@ -1,1 +1,1 @@
-docker run --name chattweiler  --env-file bot.env chattweiler:1.3
+docker run --name chattweiler  --env-file bot.env chattweiler:2.0

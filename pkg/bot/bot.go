@@ -5,6 +5,9 @@ import (
 	"chattweiler/pkg/repository"
 	"chattweiler/pkg/repository/model/types"
 	"chattweiler/pkg/vk"
+	"chattweiler/pkg/vk/content"
+	"chattweiler/pkg/vk/content/random"
+	"chattweiler/pkg/vk/courier"
 	"chattweiler/pkg/vk/events"
 	"chattweiler/pkg/vk/messages"
 	"chattweiler/pkg/vk/warden/membership"
@@ -22,18 +25,36 @@ var packageLogFields = logrus.Fields{
 	"package": "bot",
 }
 
+type BotCommand string
+
+const (
+	Info           BotCommand = "bark!"
+	AudioRequest   BotCommand = "sing song!"
+	PictureRequest BotCommand = "gimme pic!"
+)
+
 type Bot struct {
-	vkapi             *api.VK
-	vklp              *vklp.LongPoll
-	vklpwrapper       *wrapper.Wrapper
-	phrasesRepo       repository.PhraseRepository
-	membershipChecker *membership.Checker
+	vkapi                        *api.VK
+	vklp                         *vklp.LongPoll
+	vklpwrapper                  *wrapper.Wrapper
+	phrasesRepo                  repository.PhraseRepository
+	membershipChecker            *membership.Checker
+	audioContentCourier          *courier.MediaContentCourier
+	audioContentCourierChannel   chan wrapper.NewMessage
+	pictureContentCourier        *courier.MediaContentCourier
+	pictureContentCourierChannel chan wrapper.NewMessage
 }
 
-func NewBot(vkToken string, phrasesRepo repository.PhraseRepository, membershipWarningsRepo repository.MembershipWarningRepository) *Bot {
-	vkapi := api.NewVK(vkToken)
+func NewBot(
+	vkToken string,
+	phrasesRepo repository.PhraseRepository,
+	membershipWarningsRepo repository.MembershipWarningRepository,
+	contentSourceRepo repository.ContentSourceRepository,
+) *Bot {
+	communityVkApi := api.NewVK(vkToken)
 
-	lp, err := vklp.NewLongPoll(vkapi, 0)
+	mode := vklp.ReceiveAttachments + vklp.ExtendedEvents
+	lp, err := vklp.NewLongPoll(communityVkApi, mode)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
@@ -73,72 +94,69 @@ func NewBot(vkToken string, phrasesRepo repository.PhraseRepository, membershipW
 		}).Fatal("chat.warden.membership.grace.period parse failed")
 	}
 
+	vkUserApi := api.NewVK(utils.GetEnvOrDefault("vk.admin.user.token", ""))
+	audioMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault("content.audio.max.cached.attachments", "100"), 10, 32)
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+			"err":  err,
+		}).Fatal("content.audio.max.cached.attachments parse failed")
+	}
+
+	audioCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault("content.audio.cache.refresh.threshold", "0.2"), 32)
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+			"err":  err,
+		}).Fatal("content.audio.cache.refresh.threshold parse failed")
+	}
+
+	audioCollector := random.NewCachedRandomAttachmentsContentCollector(vkUserApi, content.Audio, contentSourceRepo, int(audioMaxCachedAttachments), float32(audioCacheRefreshThreshold))
+
+	audioQueueSize, err := strconv.ParseInt(utils.GetEnvOrDefault("content.audio.queue.size", "100"), 10, 32)
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+			"err":  err,
+		}).Fatal("content.audio.queue.size parse failed")
+	}
+
+	pictureQueueSize, err := strconv.ParseInt(utils.GetEnvOrDefault("content.picture.queue.size", "100"), 10, 32)
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+			"err":  err,
+		}).Fatal("content.picture.queue.size parse failed")
+	}
+
+	pictureMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault("content.picture.max.cached.attachments", "100"), 10, 32)
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+			"err":  err,
+		}).Fatal("content.picture.max.cached.attachments parse failed")
+	}
+
+	pictureCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault("content.picture.cache.refresh.threshold", "0.2"), 32)
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+			"err":  err,
+		}).Fatal("content.picture.cache.refresh.threshold parse failed")
+	}
+
+	pictureCollector := random.NewCachedRandomAttachmentsContentCollector(vkUserApi, content.Photo, contentSourceRepo, int(pictureMaxCachedAttachments), float32(pictureCacheRefreshThreshold))
+
 	return &Bot{
-		vkapi:             vkapi,
-		vklp:              lp,
-		vklpwrapper:       vklpwrapper.NewWrapper(lp),
-		phrasesRepo:       phrasesRepo,
-		membershipChecker: membership.NewChecker(chatId, communityId, membershipCheckInterval, gracePeriod, vkapi, phrasesRepo, membershipWarningsRepo),
-	}
-}
-
-func (bot *Bot) handleChatUserJoinEvent(event wrapper.ChatInfoChange) {
-	user, err := vk.GetUserInfo(bot.vkapi, event)
-	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "Bot",
-			"func":   "handleChatUserJoinEvent",
-			"err":    err,
-		}).Error("message send error")
-		return
-	}
-
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct":   "Bot",
-		"func":     "handleChatUserJoinEvent",
-		"username": user.ScreenName,
-	}).Info()
-	_, err = bot.vkapi.MessagesSend(messages.BuildMessageUsingPersonalizedPhrase(
-		event.PeerID,
-		user,
-		bot.phrasesRepo.FindAllByType(types.Welcome),
-	))
-	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "Bot",
-			"func":   "handleChatUserJoinEvent",
-			"err":    err,
-		}).Error("message send error")
-	}
-}
-
-func (bot *Bot) handleChatUserLeaveEvent(event wrapper.ChatInfoChange) {
-	user, err := vk.GetUserInfo(bot.vkapi, event)
-	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "Bot",
-			"func":   "handleChatUserLeaveEvent",
-			"err":    err,
-		}).Error("vk api error")
-		return
-	}
-
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct":   "Bot",
-		"func":     "handleChatUserLeaveEvent",
-		"username": user.ScreenName,
-	}).Info()
-	_, err = bot.vkapi.MessagesSend(messages.BuildMessageUsingPersonalizedPhrase(
-		event.PeerID,
-		user,
-		bot.phrasesRepo.FindAllByType(types.Goodbye),
-	))
-	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "Bot",
-			"func":   "handleChatUserLeaveEvent",
-			"err":    err,
-		}).Error("message send error")
+		vkapi:                        communityVkApi,
+		vklp:                         lp,
+		vklpwrapper:                  vklpwrapper.NewWrapper(lp),
+		phrasesRepo:                  phrasesRepo,
+		membershipChecker:            membership.NewChecker(chatId, communityId, membershipCheckInterval, gracePeriod, communityVkApi, phrasesRepo, membershipWarningsRepo),
+		audioContentCourier:          courier.NewMediaContentCourier(communityVkApi, vkUserApi, audioCollector, phrasesRepo),
+		audioContentCourierChannel:   make(chan wrapper.NewMessage, audioQueueSize),
+		pictureContentCourier:        courier.NewMediaContentCourier(communityVkApi, vkUserApi, pictureCollector, phrasesRepo),
+		pictureContentCourierChannel: make(chan wrapper.NewMessage, pictureQueueSize),
 	}
 }
 
@@ -172,17 +190,66 @@ func (bot *Bot) Start() {
 		}
 	})
 
+	audioRequests, err := strconv.ParseBool(utils.GetEnvOrDefault("bot.functionality.audio.requests", "false"))
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "Start",
+			"err":  err,
+		}).Fatal("bot.functionality.audio.requests parse error")
+	}
+
+	if audioRequests {
+		// run async
+		go bot.audioContentCourier.ReceiveAndDeliver(types.AudioRequest, content.Audio, bot.audioContentCourierChannel)
+	}
+
+	pictureRequests, err := strconv.ParseBool(utils.GetEnvOrDefault("bot.functionality.picture.requests", "false"))
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "Start",
+			"err":  err,
+		}).Fatal("bot.functionality.picture.requests parse error")
+	}
+
+	if pictureRequests {
+		// run async
+		go bot.pictureContentCourier.ReceiveAndDeliver(types.PictureRequest, content.Photo, bot.pictureContentCourierChannel)
+	}
+
+	infoCommand := utils.GetEnvOrDefault("bot.command.override.info", string(Info))
+	audioRequestCommand := utils.GetEnvOrDefault("bot.command.override.audio.request", string(AudioRequest))
+	pictureRequestCommand := utils.GetEnvOrDefault("bot.command.override.picture.request", string(PictureRequest))
+
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"func":      "Start",
+		"call_name": infoCommand,
+	}).Info("info command")
+
+	if audioRequests {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func":      "Start",
+			"call_name": audioRequestCommand,
+		}).Info("audio request command")
+	}
+
+	if pictureRequests {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func":      "Start",
+			"call_name": pictureRequestCommand,
+		}).Info("picture request command")
+	}
+
 	bot.vklpwrapper.OnNewMessage(func(event wrapper.NewMessage) {
-		if event.Text == "bark!" {
-			_, err := bot.vkapi.MessagesSend(messages.BuildMessagePhrase(
-				event.PeerID,
-				bot.phrasesRepo.FindAllByType(types.Info),
-			))
-			if err != nil {
-				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-					"func": "Start",
-					"err":  err,
-				}).Error("message send error")
+		switch event.Text {
+		case infoCommand:
+			bot.handleInfoCommand(event)
+		case audioRequestCommand:
+			if audioRequests {
+				bot.handleAudioRequestCommand(event)
+			}
+		case pictureRequestCommand:
+			if pictureRequests {
+				bot.handlePictureRequestCommand(event)
 			}
 		}
 	})
@@ -210,4 +277,107 @@ func (bot *Bot) Start() {
 			"err":  err,
 		}).Fatal("bot crashed")
 	}
+}
+
+func (bot *Bot) handleChatUserJoinEvent(event wrapper.ChatInfoChange) {
+	user, err := vk.GetUserInfo(bot.vkapi, strconv.Itoa(event.Info))
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "Bot",
+			"func":   "handleChatUserJoinEvent",
+			"err":    err,
+		}).Error("message send error")
+		return
+	}
+
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"struct":   "Bot",
+		"func":     "handleChatUserJoinEvent",
+		"username": user.ScreenName,
+	}).Info()
+
+	params := messages.BuildMessageUsingPersonalizedPhrase(
+		event.PeerID,
+		user,
+		bot.phrasesRepo.FindAllByType(types.Welcome),
+	)
+
+	if len(params) == 0 {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "Bot",
+			"func":   "handleChatUserJoinEvent",
+		}).Warn("empty api params ignored")
+		return
+	}
+
+	_, err = bot.vkapi.MessagesSend(params)
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "Bot",
+			"func":   "handleChatUserJoinEvent",
+			"err":    err,
+		}).Error("message send error")
+	}
+}
+
+func (bot *Bot) handleChatUserLeaveEvent(event wrapper.ChatInfoChange) {
+	user, err := vk.GetUserInfo(bot.vkapi, strconv.Itoa(event.Info))
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "Bot",
+			"func":   "handleChatUserLeaveEvent",
+			"err":    err,
+		}).Error("vk api error")
+		return
+	}
+
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"struct":   "Bot",
+		"func":     "handleChatUserLeaveEvent",
+		"username": user.ScreenName,
+	}).Info()
+
+	params := messages.BuildMessageUsingPersonalizedPhrase(
+		event.PeerID,
+		user,
+		bot.phrasesRepo.FindAllByType(types.Goodbye),
+	)
+
+	if len(params) == 0 {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "Bot",
+			"func":   "handleChatUserLeaveEvent",
+		}).Warn("empty api params ignored")
+		return
+	}
+
+	_, err = bot.vkapi.MessagesSend(params)
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "Bot",
+			"func":   "handleChatUserLeaveEvent",
+			"err":    err,
+		}).Error("message send error")
+	}
+}
+
+func (bot *Bot) handleInfoCommand(event wrapper.NewMessage) {
+	_, err := bot.vkapi.MessagesSend(messages.BuildMessagePhrase(
+		event.PeerID,
+		bot.phrasesRepo.FindAllByType(types.Info),
+	))
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "handleInfoCommand",
+			"err":  err,
+		}).Error("message send error")
+	}
+}
+
+func (bot *Bot) handleAudioRequestCommand(audioRequest wrapper.NewMessage) {
+	bot.audioContentCourierChannel <- audioRequest
+}
+
+func (bot *Bot) handlePictureRequestCommand(pictureRequest wrapper.NewMessage) {
+	bot.pictureContentCourierChannel <- pictureRequest
 }

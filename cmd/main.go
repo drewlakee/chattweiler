@@ -39,7 +39,7 @@ func main() {
 		}).Fatal("Postgres connection error")
 	}
 
-	pgCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault("pg.phrases.cache.refresh.interval", "15m"))
+	pgPhrasesCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault("pg.phrases.cache.refresh.interval", "15m"))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "main",
@@ -47,7 +47,16 @@ func main() {
 		}).Fatal("pg.phrases.cache.refresh.interval parse error")
 	}
 
-	pgCachedPgPhraseRepository := pg.NewCachedPgPhraseRepository(db, pgCacheRefreshInterval)
+	pgContentSourceCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault("pg.content.source.cache.refresh.interval", "15m"))
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "main",
+			"err":  err,
+		}).Fatal("pg.content.source.cache.refresh.interval parse error")
+	}
+
+	pgCachedContentSourceRepository := pg.NewCachedPgContentSourceRepository(db, pgContentSourceCacheRefreshInterval)
+	pgCachedPhraseRepository := pg.NewCachedPgPhraseRepository(db, pgPhrasesCacheRefreshInterval)
 	pgMembershipWarningRepository := pg.NewPgMembershipWarningRepository(db)
-	bot.NewBot(vkBotToken, pgCachedPgPhraseRepository, pgMembershipWarningRepository).Start()
+	bot.NewBot(vkBotToken, pgCachedPhraseRepository, pgMembershipWarningRepository, pgCachedContentSourceRepository).Start()
 }

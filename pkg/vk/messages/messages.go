@@ -1,6 +1,7 @@
 package messages
 
 import (
+	"chattweiler/pkg/app/utils"
 	"chattweiler/pkg/repository/model"
 	"chattweiler/pkg/roulette"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"github.com/SevereCloud/vksdk/v2/api/params"
 	"github.com/SevereCloud/vksdk/v2/object"
 	"github.com/sirupsen/logrus"
+	"strconv"
 	"strings"
 )
 
@@ -21,7 +23,7 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func":     "BuildMessageUsingPersonalizedPhrase",
 			"fallback": "empty api params",
-		}).Warn("Empty phrases passed in")
+		}).Warn("empty phrases passed")
 		return api.Params{}
 	}
 
@@ -29,8 +31,19 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 	builder.PeerID(peerId)
 	builder.RandomID(0)
 
+	useFirstNameInsteadUsername, err := strconv.ParseBool(utils.GetEnvOrDefault("chat.use.first.name.instead.username", "false"))
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "BuildMessageUsingPersonalizedPhrase",
+		}).Error("chat.use.first.name.instead.username parse error")
+	}
+
 	if phrase.IsUserTemplated {
-		builder.Message(strings.ReplaceAll(phrase.Text, "%username%", "@"+user.ScreenName))
+		if useFirstNameInsteadUsername {
+			builder.Message(strings.ReplaceAll(phrase.Text, "%username%", fmt.Sprintf("@%s (%s)", user.ScreenName, user.FirstName)))
+		} else {
+			builder.Message(strings.ReplaceAll(phrase.Text, "%username%", "@"+user.ScreenName))
+		}
 	} else {
 		builder.Message(fmt.Sprintf("%s, \n\n%s", "@"+user.ScreenName, phrase.Text))
 	}
@@ -42,7 +55,7 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"func":      "BuildMessageUsingPersonalizedPhrase",
 				"phrase_id": phrase.PhraseID,
-			}).Warn("Pharse specified with audio accompaniment, but audio_id doesn't pointed")
+			}).Warn("phrase is specified with audio accompaniment, but audio_id doesn't pointed")
 		}
 	}
 
@@ -55,7 +68,7 @@ func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func":     "BuildMessagePhrase",
 			"fallback": "empty api params",
-		}).Warn("Empty phrases passed in")
+		}).Warn("empty phrases passed in")
 		return api.Params{}
 	}
 
@@ -71,7 +84,7 @@ func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"func":      "BuildMessagePhrase",
 				"phrase_id": phrase.PhraseID,
-			}).Warn("Pharse specified with audio accompaniment, but audio_id doesn't pointed")
+			}).Warn("pharse specified with audio accompaniment, but audio_id doesn't pointed")
 		}
 	}
 
