@@ -109,8 +109,8 @@ By default the application uses these types:
 |  Variable Name   | Description |
 | -------------   | ------------- |
 | `vk.community.bot.token (string)`     | You cant take it here *vk.com/<your_community>?act=tokens*  |
-| `vk.community.id (int)`   | It should be an positive integer. You can take it by a click on some post at the community and take it from url, like *vk.com/<your_community>?w=wall-<community_id>_8851* |
-| `vk.community.chat.id (int)`   | If you know peerId of a chat then the chat id will be like `peerId - 2000000000` result. Usually it has a sequence, so if it's your the first chat in the community then chat id should be like 1 |
+| `vk.community.id (int)`   | It should be a positive integer value. You can take it by a click on some post at a community and take it from the url, like *vk.com/<your_community>?w=wall-<community_id>_8851* |
+| `vk.community.chat.id (int)`   | If you know peerId of a chat then a chat id will be like `peerId - 2000000000` result. Usually it has a sequence, so if it's your the first chat in a community then a chat id should be like 1 |
 | `pg.datasource.string (string)` | Example, *"host=localhost user=postgres password=postgres sslmode=disable dbname=chattweiler"* or *"postgresql://username:password@host:port/dbname?param1=arg1"* |
 
 <details>
@@ -118,7 +118,7 @@ By default the application uses these types:
 
 |  Variable Name | Default value | Description |
 | ------------- | ------------- | ------------- |
-| `vk.admin.user.token` | `"" (string)` | Community admin's "Implicit flow" token. Mandatory if you want to be able to use audio and picture requests. <a href="https://dev.vk.com/api/access-token/getting-started">How to get it</a> |
+| `vk.admin.user.token` | `"" (string)` | Community admin's "Implicit flow" token. Mandatory if you want to be able to use audio and picture request commands. <a href="https://dev.vk.com/api/access-token/getting-started">How to get it</a> |
 
 </details>
 
@@ -137,9 +137,9 @@ By default the application uses these types:
 
 |  Variable Name  | Default value | Description |
 | -------------  | ------------- | ------------- |
-| `chat.warden.membership.check.interval` | `10m (string, golang type - time.Duration)` | An interval which after the application launch starts an async worker to check a chat for new membership warnings |
+| `chat.warden.membership.check.interval` | `10m (string, golang type - time.Duration)` | An interval after which starts an async worker to check a chat for new membership warnings |
 | `chat.warden.membership.grace.period` | `1h (string, golang type - time.Duration)` | A period that the application will assign to new warnings about membership |
-| `chat.use.first.name.instead.username` | `false (boolean)` | A toggle for using a first name of a member instead his username. For example, Ammy (Joe etc.) instead of @username |
+| `chat.use.first.name.instead.username` | `false (boolean)` | A toggle for using a first name of a member instead of his username. For example, Ammy (Joe etc.) instead of @username |
 
 </details>
 
@@ -175,7 +175,7 @@ By default the application uses these types:
 
 # How To Run
 
-Before the application will be running, create `bot.env` file inside the project directory and fill it up by all the mandatory environment variables
+Before the application will be running, create the file `bot.env` inside the project directory and fill it up by all the mandatory environment variables.
 
 Run the commands in the console:
 
