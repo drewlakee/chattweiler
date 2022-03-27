@@ -22,12 +22,12 @@ Chattweiler is a chat bot for Vkontankte. Briefly say, it takes care of a chat.
 </details>
 
 <details>
-   <summary><b>Controls membership at a chat's community: makes warnings and kicks if people don't care about it</b></summary><br>
+   <summary><b>Controls a membership at a chat's community: makes warnings and kicks if people don't care about it</b></summary><br>
    <img src="https://user-images.githubusercontent.com/44072343/160234979-5b19ee74-2be6-44a3-95eb-9193f2d38086.png" alt="warning for member example">
 </details>
 
 <details>
-   <summary><b>Can send a random content to a chat</b></summary><br>
+   <summary><b>Can send a random content to the chat</b></summary><br>
    
    The commands' names could be overridden. See "Configurations" for details
    
@@ -66,8 +66,8 @@ By default the application uses these types:
     <summary><b>phrase</b></summary><br>
     
 - `text` is an actual phrase
-- `is_user_templated` means that a `text` can has inside a `%username%` mark which tells to the application to replace it to an actual username
-- `weight` brings a bit of probability. Allows the application to choose a phrase by it's probability (takes account only between phrases with the same phrase type). Details: <a href="https://en.wikipedia.org/wiki/Fitness_proportionate_selection">Fitness proportionate selection</a>
+- `is_user_templated` means that the `text` can has inside a `%username%` mark which tells to the application to replace it to an actual username
+- `weight` brings a bit of probability. Allows the application to choose a phrase by it's probability (counts only between phrases with the same phrase type). Details: <a href="https://en.wikipedia.org/wiki/Fitness_proportionate_selection">Fitness proportionate selection</a>
 - `vk_audio_id` is an audio's id at Vkontakte, the application attaches it to a message if `is_audio_accompaniment` is true. Example of `vk_audio_id`, audio-2001545048_57545048
 
 </details>
@@ -77,9 +77,9 @@ By default the application uses these types:
 
 Contains information about membership warnings.
 
-- `first_warning_ts` is a timestamp which tells about when the first time a member was notified
-- `grace_period` is a period which the application uses to define warning's status after `first_warning_ts`. For example, if `first_warning_ts + grace_period` less than `now()` then a warning has expired status
-- `is_relevant` is a flag which tells about a current status of a warning. For example, if warning sent and grace period is justified, it has true, otherwise it has false.
+- `first_warning_ts` is a timestamp which tells about when the first time a member was notified about a membership
+- `grace_period` is a period which the application uses to define warning's status after `first_warning_ts`. For example, if `first_warning_ts + grace_period` less than `now()` then the warning has expired status
+- `is_relevant` is a flag which tells about a current status of a warning. For example, if warning already sent and grace period still justified, it has true, otherwise it has false.
 
 </details>
 
@@ -98,7 +98,7 @@ By default the application uses these types:
 <details>
     <summary><b>content_source</b></summary><br>
 
-- `vk_community_id` is a url name of community. Example, vk.com/awesome_community. Here awesome_community is a url name.
+- `vk_community_id` is a url name of a community. Example, vk.com/awesome_community. Here awesome_community is the url name.
 
 </details>
 
@@ -110,7 +110,7 @@ By default the application uses these types:
 | -------------   | ------------- |
 | `vk.community.bot.token (string)`     | You cant take it here *vk.com/<your_community>?act=tokens*  |
 | `vk.community.id (int)`   | It should be a positive integer value. You can take it by a click on some post at a community and take it from the url, like *vk.com/<your_community>?w=wall-<community_id>_8851* |
-| `vk.community.chat.id (int)`   | If you know peerId of a chat then a chat id will be like `peerId - 2000000000` result. Usually it has a sequence, so if it's your the first chat in a community then a chat id should be like 1 |
+| `vk.community.chat.id (int)`   | If you know peerId of a chat then a chat id will be like `peerId - 2000000000` result. Usually it has a sequence, so if it's your the first chat in a community then the chat id should be like 1 |
 | `pg.datasource.string (string)` | Example, *"host=localhost user=postgres password=postgres sslmode=disable dbname=chattweiler"* or *"postgresql://username:password@host:port/dbname?param1=arg1"* |
 
 <details>
@@ -118,7 +118,7 @@ By default the application uses these types:
 
 |  Variable Name | Default value | Description |
 | ------------- | ------------- | ------------- |
-| `vk.admin.user.token` | `"" (string)` | Community admin's "Implicit flow" token. Mandatory if you want to be able to use audio and picture request commands. <a href="https://dev.vk.com/api/access-token/getting-started">How to get it</a> |
+| `vk.admin.user.token` | `"" (string)` | A community admin's "Implicit flow" token. Mandatory if you want to be able to use audio and picture request commands. <a href="https://dev.vk.com/api/access-token/getting-started">How to get it</a> |
 
 </details>
 
@@ -138,7 +138,7 @@ By default the application uses these types:
 |  Variable Name  | Default value | Description |
 | -------------  | ------------- | ------------- |
 | `chat.warden.membership.check.interval` | `10m (string, golang type - time.Duration)` | An interval after which starts an async worker to check a chat for new membership warnings |
-| `chat.warden.membership.grace.period` | `1h (string, golang type - time.Duration)` | A period that the application will assign to new warnings about membership |
+| `chat.warden.membership.grace.period` | `1h (string, golang type - time.Duration)` | A period that the application will assign to new warnings about a membership |
 | `chat.use.first.name.instead.username` | `false (boolean)` | A toggle for using a first name of a member instead of his username. For example, Ammy (Joe etc.) instead of @username |
 
 </details>
@@ -148,12 +148,12 @@ By default the application uses these types:
 
 |  Variable Name  | Default value | Description |
 | -------------  | ------------- | ------------- |
-| `content.audio.max.cached.attachments` | `100 (int)` | Number of maximum available cached audio attachments |
-| `content.audio.cache.refresh.threshold` | `0.2 (float)` | Float value between 0.0 and 1.0. Used for audios cache refreshing |
-| `content.audio.queue.size` | `100 (int)` | Number of maximum requests queue for audio |
-| `content.picture.max.cached.attachments` | `100 (int)` | Number of maximum available cached picture attachments |
-| `content.picture.cache.refresh.threshold` | `0.2 (float)` | Float value between 0.0 and 1.0. Used for pictures cache refreshing |
-| `content.picture.queue.size` | `100 (int)` | Number of maximum requests queue for picture |
+| `content.audio.max.cached.attachments` | `100 (int)` | A number of maximum available cached audio attachments |
+| `content.audio.cache.refresh.threshold` | `0.2 (float)` | A float value between 0.0 and 1.0. Used for audios cache refreshing |
+| `content.audio.queue.size` | `100 (int)` | A number of maximum requests queue for audio |
+| `content.picture.max.cached.attachments` | `100 (int)` | A number of maximum available cached picture attachments |
+| `content.picture.cache.refresh.threshold` | `0.2 (float)` | A float value between 0.0 and 1.0. Used for pictures cache refreshing |
+| `content.picture.queue.size` | `100 (int)` | A number of maximum requests queue for picture |
 
 </details>
 
@@ -162,9 +162,9 @@ By default the application uses these types:
 
 |  Variable Name   | Default value | Description |
 | -------------  | ------------- | ------------- |
-| `bot.command.override.info` | `bark! (string)` | Variable for info command name overriding |
-| `bot.command.override.audio.request` | `sing song! (string)` | Variable for audio request command name overriding |
-| `bot.command.override.picture.request` | `gimme pic! (string)` | Variable for picture request command name overriding |
+| `bot.command.override.info` | `bark! (string)` | A variable for info command name overriding |
+| `bot.command.override.audio.request` | `sing song! (string)` | A variable for audio request command name overriding |
+| `bot.command.override.picture.request` | `gimme pic! (string)` | A variable for picture request command name overriding |
 | `bot.functionality.welcome.new.members` | `true (boolean)` | A toggle for new members welcome functions |
 | `bot.functionality.goodbye.members` | `true (boolean)` | A toggle for goodbye members' leavings functions |
 | `bot.functionality.membership.checking` | `true (boolean)` | A toggle for membership checking functions  |
