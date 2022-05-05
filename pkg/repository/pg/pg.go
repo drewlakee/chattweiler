@@ -33,6 +33,11 @@ func NewCachedPgPhraseRepository(db *sqlx.DB, cacheRefreshInterval time.Duration
 }
 
 func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phrase {
+	startTime := time.Now().UnixMilli()
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"struct": "CachedPgPhraseRepository",
+		"func":   "FindAll",
+	}).Info("Updating phrases cache...")
 	if time.Now().Before(cachedPgPhraseRepository.lastCacheRefresh.Add(cachedPgPhraseRepository.cacheRefreshInterval)) {
 		// atomic phrases read
 		phrasesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&cachedPgPhraseRepository.phrases)))
@@ -71,6 +76,10 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phra
 	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&cachedPgPhraseRepository.phrases)), updatedPhrasesPtr)
 
 	cachedPgPhraseRepository.lastCacheRefresh = time.Now()
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"struct": "CachedPgPhraseRepository",
+		"func":   "FindAll",
+	}).Info("Phrases cache successfully updated for", startTime-time.Now().UnixMilli(), "ms")
 	return updatedPhrases
 }
 
@@ -228,6 +237,11 @@ func NewCachedPgContentSourceRepository(db *sqlx.DB, cacheRefreshInterval time.D
 }
 
 func (cachedPgContentSourceRepository *CachedPgContentSourceRepository) FindAll() []model.ContentSource {
+	startTime := time.Now().UnixMilli()
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"struct": "CachedPgContentSourceRepository",
+		"func":   "FindAll",
+	}).Info("Updating content sources cache...")
 	if time.Now().Before(cachedPgContentSourceRepository.lastCacheRefresh.Add(cachedPgContentSourceRepository.cacheRefreshInterval)) {
 		// atomic content sources read
 		contentSourcesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&cachedPgContentSourceRepository.contentSources)))
@@ -266,6 +280,10 @@ func (cachedPgContentSourceRepository *CachedPgContentSourceRepository) FindAll(
 	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&cachedPgContentSourceRepository.contentSources)), updatedUpdatedContentSourcesPtr)
 
 	cachedPgContentSourceRepository.lastCacheRefresh = time.Now()
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"struct": "CachedPgContentSourceRepository",
+		"func":   "FindAll",
+	}).Info("Content sources cache successfully updated for", startTime-time.Now().UnixMilli(), "ms")
 	return updatedContentSources
 }
 

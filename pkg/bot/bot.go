@@ -46,12 +46,18 @@ type Bot struct {
 }
 
 func NewBot(
-	vkToken string,
 	phrasesRepo repository.PhraseRepository,
 	membershipWarningsRepo repository.MembershipWarningRepository,
 	contentSourceRepo repository.ContentSourceRepository,
 ) *Bot {
-	communityVkApi := api.NewVK(vkToken)
+	vkBotToken := utils.GetEnvOrDefault("vk.community.bot.token", "unset")
+	if vkBotToken == "unset" {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+		}).Fatal("vk.community.bot.token is unset")
+	}
+
+	communityVkApi := api.NewVK(vkBotToken)
 
 	mode := vklp.ReceiveAttachments + vklp.ExtendedEvents
 	lp, err := vklp.NewLongPoll(communityVkApi, mode)
@@ -67,7 +73,7 @@ func NewBot(
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
 			"err":  err,
-		}).Fatal("vk.community.chat.id parse failed")
+		}).Fatal("vk.community.chat.id is unset or parse failed")
 	}
 
 	communityId, err := strconv.ParseInt(os.Getenv("vk.community.id"), 10, 64)
@@ -75,7 +81,7 @@ func NewBot(
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
 			"err":  err,
-		}).Fatal("vk.community.id parse failed")
+		}).Fatal("vk.community.id is unset or parse failed")
 	}
 
 	membershipCheckInterval, err := time.ParseDuration(utils.GetEnvOrDefault("chat.warden.membership.check.interval", "10m"))
