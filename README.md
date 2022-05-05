@@ -9,7 +9,7 @@ Chattweiler is a chat bot for Vkontankte. Briefly say, it takes care of a chat.
 # Bot's Features
 
 <details>
-   <summary><b>Controls new chat joins: welcomes new members</b></summary><br>
+   <summary>Controls new chat joins: welcomes new members<</summary><br>
    
    You also can configure some audio with a welcome phrase. See "PostgreSQL Diagrams" for details
    
@@ -17,17 +17,17 @@ Chattweiler is a chat bot for Vkontankte. Briefly say, it takes care of a chat.
 </details>
 
 <details>
-   <summary><b>Controls chat leavings: says goodbye</b></summary><br>
+   <summary>Controls chat leavings: says goodbye</summary><br>
    <img src="https://user-images.githubusercontent.com/44072343/160234884-090b99e2-102e-43aa-ae0a-18bf8a66c191.png" alt="goodbye member example">
 </details>
 
 <details>
-   <summary><b>Controls a membership at a chat's community: makes warnings and kicks if people don't care about it</b></summary><br>
+   <summary>Controls a membership at a chat's community: makes warnings and kicks if people don't care about it</summary><br>
    <img src="https://user-images.githubusercontent.com/44072343/160234979-5b19ee74-2be6-44a3-95eb-9193f2d38086.png" alt="warning for member example">
 </details>
 
 <details>
-   <summary><b>Can send a random content to the chat</b></summary><br>
+   <summary>Can send a random content to the chat</summary><br>
    
    The commands' names could be overridden. See "Configurations" for details
    
@@ -47,7 +47,7 @@ Chattweiler is a chat bot for Vkontankte. Briefly say, it takes care of a chat.
 <br>
 
 <details>
-    <summary><b>phrase_type</b></summary><br>
+    <summary>phrase_type</summary><br>
     
 Phrases could have different types.
 
@@ -63,7 +63,7 @@ By default the application uses these types:
 </details>
 
 <details>
-    <summary><b>phrase</b></summary><br>
+    <summary>phrase</summary><br>
     
 - `text` is an actual phrase
 - `is_user_templated` means that the `text` can has inside a `%username%` mark which tells to the application to replace it to an actual username
@@ -73,7 +73,7 @@ By default the application uses these types:
 </details>
 
 <details>
-    <summary><b>membership_warning</b></summary><br>
+    <summary>membership_warning</summary><br>
 
 Contains information about membership warnings.
 
@@ -84,7 +84,7 @@ Contains information about membership warnings.
 </details>
 
 <details>
-    <summary><b>source_type</b></summary><br>
+    <summary>source_type</summary><br>
 
 Content sources could have different types.
 
@@ -96,7 +96,7 @@ By default the application uses these types:
 </details>
 
 <details>
-    <summary><b>content_source</b></summary><br>
+    <summary>content_source</summary><br>
 
 - `vk_community_id` is a url name of a community. Example, vk.com/awesome_community. Here awesome_community is the url name.
 
@@ -114,7 +114,7 @@ By default the application uses these types:
 | `pg.datasource.string (string)` | Example, *"host=localhost user=postgres password=postgres sslmode=disable dbname=chattweiler"* or *"postgresql://username:password@host:port/dbname?param1=arg1"* |
 
 <details>
-    <summary><b>vk optional configurations</b></summary><br>
+    <summary>vk optional configurations</summary><br>
 
 |  Variable Name | Default value | Description |
 | ------------- | ------------- | ------------- |
@@ -123,7 +123,7 @@ By default the application uses these types:
 </details>
 
 <details>
-    <summary><b>pg optional configurations</b></summary><br>
+    <summary>pg optional configurations</summary><br>
 
 |  Variable Name | Default value | Description |
 | ------------- | ------------- | ------------- |
@@ -133,7 +133,7 @@ By default the application uses these types:
 </details>
 
 <details>
-    <summary><b>chat optional configurations</b></summary><br>
+    <summary>chat optional configurations</summary><br>
 
 |  Variable Name  | Default value | Description |
 | -------------  | ------------- | ------------- |
@@ -144,7 +144,7 @@ By default the application uses these types:
 </details>
 
 <details>
-    <summary><b>content optional configurations</b></summary><br>
+    <summary>content optional configurations</summary><br>
 
 |  Variable Name  | Default value | Description |
 | -------------  | ------------- | ------------- |
@@ -158,7 +158,7 @@ By default the application uses these types:
 </details>
 
 <details>
-    <summary><b>bot optional configurations</b></summary><br>
+    <summary>bot optional configurations</summary><br>
 
 |  Variable Name   | Default value | Description |
 | -------------  | ------------- | ------------- |
