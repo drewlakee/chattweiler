@@ -79,7 +79,7 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phra
 	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 		"struct": "CachedPgPhraseRepository",
 		"func":   "FindAll",
-	}).Info("Phrases cache successfully updated for", startTime-time.Now().UnixMilli(), "ms")
+	}).Info("Phrases cache successfully updated for ", time.Now().UnixMilli()-startTime, "ms")
 	return updatedPhrases
 }
 
@@ -176,27 +176,6 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToU
 	return true
 }
 
-func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAll() []model.MembershipWarning {
-	query :=
-		"SELECT warning_id, user_id, username, first_warning_ts, grace_period_ns, is_relevant " +
-			"FROM membership_warning"
-
-	var warnings []model.MembershipWarning
-	err := pgMembershipWarningRepository.db.Select(&warnings, query)
-	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "PgMembershipWarningRepository",
-			"func":     "FindAll",
-			"err":      err,
-			"query":    query,
-			"fallback": "empty list",
-		}).Error()
-		return []model.MembershipWarning{}
-	}
-
-	return warnings
-}
-
 func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAllRelevant() []model.MembershipWarning {
 	query :=
 		"SELECT warning_id, user_id, username, first_warning_ts, grace_period_ns, is_relevant " +
@@ -283,7 +262,7 @@ func (cachedPgContentSourceRepository *CachedPgContentSourceRepository) FindAll(
 	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 		"struct": "CachedPgContentSourceRepository",
 		"func":   "FindAll",
-	}).Info("Content sources cache successfully updated for", startTime-time.Now().UnixMilli(), "ms")
+	}).Info("Content sources cache successfully updated for ", time.Now().UnixMilli()-startTime, "ms")
 	return updatedContentSources
 }
 
