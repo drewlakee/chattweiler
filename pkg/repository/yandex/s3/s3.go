@@ -63,12 +63,6 @@ func NewCsvObjectStorageCachedPhraseRepository(client *s3.Client, bucket, key st
 
 func (repo *CsvObjectStorageCachedPhraseRepository) FindAll() []model.Phrase {
 	startTime := time.Now().UnixMilli()
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CsvObjectStorageCachedPhraseRepository",
-		"func":   "FindAll",
-		"bucket": repo.bucket,
-		"key":    repo.key,
-	}).Info("Updating phrases cache...")
 	if time.Now().Before(repo.lastCacheRefresh.Add(repo.cacheRefreshInterval)) {
 		// atomic phrases read
 		phrasesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&repo.phrases)))
@@ -137,7 +131,7 @@ func (repo *CsvObjectStorageCachedPhraseRepository) FindAll() []model.Phrase {
 		"func":   "FindAll",
 		"bucket": repo.bucket,
 		"key":    repo.key,
-	}).Info("Phrases cache successfully updated for ", time.Now().UnixMilli()-startTime, "ms")
+	}).Info("Cache successfully updated for ", time.Now().UnixMilli()-startTime, "ms")
 	return updatedPhrases
 }
 
@@ -174,12 +168,6 @@ func NewCsvObjectStorageCachedContentSourceRepository(client *s3.Client, bucket,
 
 func (repo *CsvObjectStorageCachedContentSourceRepository) FindAll() []model.ContentSource {
 	startTime := time.Now().UnixMilli()
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CsvObjectStorageCachedContentSourceRepository",
-		"func":   "FindAll",
-		"bucket": repo.bucket,
-		"key":    repo.key,
-	}).Info("Updating content sources cache...")
 	if time.Now().Before(repo.lastCacheRefresh.Add(repo.cacheRefreshInterval)) {
 		// atomic content sources read
 		contentSourcesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&repo.contentSources)))
@@ -248,7 +236,7 @@ func (repo *CsvObjectStorageCachedContentSourceRepository) FindAll() []model.Con
 		"func":   "FindAll",
 		"bucket": repo.bucket,
 		"key":    repo.key,
-	}).Info("Content sources cache successfully updated for ", time.Now().UnixMilli()-startTime, "ms")
+	}).Info("Cache successfully updated for ", time.Now().UnixMilli()-startTime, "ms")
 	return updatedContentSources
 }
 
@@ -311,6 +299,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) filterOnlyRelevant(warn
 
 func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []model.MembershipWarning {
 	now := time.Now()
+	startTime := now.UnixMilli()
 	if !isTheSameDate(repo.currentDate, now) {
 		previousKey := getDateAsString(repo.currentDate)
 		object, err := repo.client.GetObject(context.TODO(), &s3.GetObjectInput{
@@ -348,7 +337,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []mod
 		if err != nil {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"struct":   "CsvObjectStorageCachedContentSourceRepository",
-				"func":     "FindAll",
+				"func":     "FindAllRelevant",
 				"err":      err,
 				"bucket":   repo.bucket,
 				"key":      previousKey,
@@ -367,7 +356,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []mod
 		if err != nil {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"struct":   "CsvObjectStorageCachedContentSourceRepository",
-				"func":     "FindAll",
+				"func":     "FindAllRelevant",
 				"err":      err,
 				"bucket":   repo.bucket,
 				"key":      newKey,
@@ -377,6 +366,12 @@ func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []mod
 		}
 
 		repo.currentDate = now
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"struct": "CsvObjectStorageCachedContentSourceRepository",
+			"func":   "FindAllRelevant",
+			"bucket": repo.bucket,
+			"key":    newKey,
+		}).Info("Found for ", time.Now().UnixMilli()-startTime, "ms")
 		return relevantWarnings
 	}
 
@@ -388,7 +383,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []mod
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct":   "CsvObjectStorageMembershipWarningRepository",
-			"func":     "FindAll",
+			"func":     "FindAllRelevant",
 			"err":      err,
 			"bucket":   repo.bucket,
 			"key":      currentKey,
@@ -404,17 +399,25 @@ func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []mod
 			"func":     "FindAllRelevant",
 			"err":      err,
 			"bucket":   repo.bucket,
-			"key":      getDateAsString(repo.currentDate),
+			"key":      currentKey,
 			"fallback": "empty list",
 		}).Error("s3 client error")
 		return []model.MembershipWarning{}
 	}
 
-	return repo.filterOnlyRelevant(warnings)
+	relevantWarnings := repo.filterOnlyRelevant(warnings)
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"struct": "CsvObjectStorageMembershipWarningRepository",
+		"func":   "FindAllRelevant",
+		"bucket": repo.bucket,
+		"key":    currentKey,
+	}).Info("Found for ", time.Now().UnixMilli()-startTime, "ms")
+	return relevantWarnings
 }
 
 func (repo *CsvObjectStorageMembershipWarningRepository) Insert(model.MembershipWarning) bool {
 	now := time.Now()
+	startTime := now.UnixMilli()
 	var warningsToInsert []model.MembershipWarning
 	if !isTheSameDate(repo.currentDate, now) {
 		warningsToInsert = repo.FindAllRelevant()
@@ -478,11 +481,18 @@ func (repo *CsvObjectStorageMembershipWarningRepository) Insert(model.Membership
 		return false
 	}
 
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"struct": "CsvObjectStorageMembershipWarningRepository",
+		"func":   "Insert",
+		"bucket": repo.bucket,
+		"key":    currentKey,
+	}).Info("Inserted for ", time.Now().UnixMilli()-startTime, "ms")
 	return true
 }
 
 func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToUnRelevant(warnings ...model.MembershipWarning) bool {
 	now := time.Now()
+	startTime := now.UnixMilli()
 	var warningsToUpdateMap map[int]model.MembershipWarning
 	if !isTheSameDate(repo.currentDate, now) {
 		for _, warning := range repo.FindAllRelevant() {
@@ -564,5 +574,12 @@ func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToUnRelevant(w
 		}).Error("csv file updating error")
 		return false
 	}
+
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"struct": "CsvObjectStorageMembershipWarningRepository",
+		"func":   "UpdateAllToUnRelevant",
+		"bucket": repo.bucket,
+		"key":    currentKey,
+	}).Info("Updated for ", time.Now().UnixMilli()-startTime, "ms")
 	return true
 }
