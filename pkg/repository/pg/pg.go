@@ -93,17 +93,11 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phra
 
 func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAllByType(phraseType types.PhraseType) []model.Phrase {
 	var phrases []model.Phrase
-	startTime := time.Now().UnixMilli()
 	for _, phrase := range cachedPgPhraseRepository.FindAll() {
 		if phraseType == phrase.GetPhraseType() {
 			phrases = append(phrases, phrase)
 		}
 	}
-
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CachedPgPhraseRepository",
-		"func":   "FindAllByType",
-	}).Info("Found for ", time.Now().UnixMilli()-startTime, "ms")
 	return phrases
 }
 

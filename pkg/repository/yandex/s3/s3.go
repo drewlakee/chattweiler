@@ -250,18 +250,11 @@ func (repo *CsvObjectStorageCachedContentSourceRepository) FindAll() []model.Con
 
 func (repo *CsvObjectStorageCachedContentSourceRepository) FindAllByType(sourceType types.ContentSourceType) []model.ContentSource {
 	var contentSources []model.ContentSource
-	startTime := time.Now().UnixMilli()
 	for _, contentSource := range repo.FindAll() {
 		if sourceType == contentSource.SourceType {
 			contentSources = append(contentSources, contentSource)
 		}
 	}
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CsvObjectStorageCachedContentSourceRepository",
-		"func":   "FindAllByType",
-		"bucket": repo.bucket,
-		"key":    repo.key,
-	}).Info("Found for ", time.Now().UnixMilli()-startTime, "ms")
 	return contentSources
 }
 

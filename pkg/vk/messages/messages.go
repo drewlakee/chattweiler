@@ -3,6 +3,7 @@ package messages
 import (
 	"chattweiler/pkg/app/utils"
 	"chattweiler/pkg/repository/model"
+	"chattweiler/pkg/repository/model/types"
 	"chattweiler/pkg/roulette"
 	"fmt"
 	"github.com/SevereCloud/vksdk/v2/api"
@@ -17,19 +18,22 @@ var packageLogFields = logrus.Fields{
 	"package": "messages",
 }
 
-func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phrases []model.Phrase) api.Params {
+func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phrasesType types.PhraseType, phrases []model.Phrase) api.Params {
 	phrase := roulette.Spin(phrases...)
 	if phrase == nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func":     "BuildMessageUsingPersonalizedPhrase",
-			"fallback": "empty api params",
-		}).Warn("empty phrases passed")
-		return api.Params{}
+			"func":       "BuildMessageUsingPersonalizedPhrase",
+			"phraseType": phrasesType,
+		}).Warn("Were passed empty phrases, but a message supposed to be with a phrase")
 	}
 
 	builder := params.NewMessagesSendBuilder()
 	builder.PeerID(peerId)
 	builder.RandomID(0)
+
+	if phrase == nil {
+		return builder.Params
+	}
 
 	useFirstNameInsteadUsername, err := strconv.ParseBool(utils.GetEnvOrDefault("chat.use.first.name.instead.username", "false"))
 	if err != nil {

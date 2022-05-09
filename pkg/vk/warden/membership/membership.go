@@ -135,6 +135,7 @@ func (checker *Checker) checkChatForNewWarning(members map[int]object.UsersUser,
 			_, err := checker.vkapi.MessagesSend(messages.BuildMessageUsingPersonalizedPhrase(
 				peerId,
 				&userProfile,
+				types.MembershipWarning,
 				checker.phrasesRepo.FindAllByType(types.MembershipWarning),
 			))
 			if err != nil {

@@ -191,7 +191,7 @@ func (bot *Bot) Start() {
 			}
 		case vklpwrapper.ChatUserLeave:
 			if goodbyeMembers {
-				bot.handleChatUserLeaveEvent(event)
+				bot.handleChatUserLeavingEvent(event)
 			}
 		}
 	})
@@ -305,14 +305,15 @@ func (bot *Bot) handleChatUserJoinEvent(event wrapper.ChatInfoChange) {
 	params := messages.BuildMessageUsingPersonalizedPhrase(
 		event.PeerID,
 		user,
+		types.Welcome,
 		bot.phrasesRepo.FindAllByType(types.Welcome),
 	)
 
-	if len(params) == 0 {
+	if _, messageContainsPhrase := params["message"]; !messageContainsPhrase {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct": "Bot",
 			"func":   "handleChatUserJoinEvent",
-		}).Warn("empty api params ignored")
+		}).Warn("message doesn't have any phrase for join event, join event ignored")
 		return
 	}
 
@@ -326,12 +327,12 @@ func (bot *Bot) handleChatUserJoinEvent(event wrapper.ChatInfoChange) {
 	}
 }
 
-func (bot *Bot) handleChatUserLeaveEvent(event wrapper.ChatInfoChange) {
+func (bot *Bot) handleChatUserLeavingEvent(event wrapper.ChatInfoChange) {
 	user, err := vk.GetUserInfo(bot.vkapi, strconv.Itoa(event.Info))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct": "Bot",
-			"func":   "handleChatUserLeaveEvent",
+			"func":   "handleChatUserLeavingEvent",
 			"err":    err,
 		}).Error("vk api error")
 		return
@@ -339,21 +340,22 @@ func (bot *Bot) handleChatUserLeaveEvent(event wrapper.ChatInfoChange) {
 
 	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 		"struct":   "Bot",
-		"func":     "handleChatUserLeaveEvent",
+		"func":     "handleChatUserLeavingEvent",
 		"username": user.ScreenName,
 	}).Info()
 
 	params := messages.BuildMessageUsingPersonalizedPhrase(
 		event.PeerID,
 		user,
+		types.Goodbye,
 		bot.phrasesRepo.FindAllByType(types.Goodbye),
 	)
 
-	if len(params) == 0 {
+	if _, messageContainsPhrase := params["message"]; !messageContainsPhrase {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct": "Bot",
-			"func":   "handleChatUserLeaveEvent",
-		}).Warn("empty api params ignored")
+			"func":   "handleChatUserLeavingEvent",
+		}).Warn("message doesn't have any phrase for leaving event, leaving event ignored")
 		return
 	}
 
@@ -361,7 +363,7 @@ func (bot *Bot) handleChatUserLeaveEvent(event wrapper.ChatInfoChange) {
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct": "Bot",
-			"func":   "handleChatUserLeaveEvent",
+			"func":   "handleChatUserLeavingEvent",
 			"err":    err,
 		}).Error("message send error")
 	}

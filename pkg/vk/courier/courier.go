@@ -55,16 +55,9 @@ func (courier *MediaContentCourier) ReceiveAndDeliver(deliverPhraseType types.Ph
 			apiParams := messages.BuildMessageUsingPersonalizedPhrase(
 				requestMessage.PeerID,
 				user,
+				deliverPhraseType,
 				courier.phrasesRepo.FindAllByType(deliverPhraseType),
 			)
-
-			if len(apiParams) == 0 {
-				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-					"struct": "MediaContentCourier",
-					"func":   "ReceiveAndDeliver",
-				}).Warn("empty api params ignored")
-				continue
-			}
 
 			mediaContent := courier.attachmentsContentCollector.CollectOne()
 
