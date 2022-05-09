@@ -89,7 +89,7 @@ func (collector *CachedRandomAttachmentsContentCollector) refreshCacheDifference
 
 	difference := collector.maxCachedAttachments - len(collector.cachedAttachments)
 	var collectResult []object.WallWallpostAttachment
-	for alreadyPickedUpContentCount != len(contentSequence) || difference > 0 {
+	for alreadyPickedUpContentCount != len(contentSequence) && difference > 0 {
 		randomIndex := rand.Intn(len(contentSequence))
 		for alreadyPickedUpContentVector[randomIndex] == 1 {
 			randomIndex++
