@@ -10,6 +10,7 @@ import (
 	"github.com/jszwec/csvutil"
 	"github.com/sirupsen/logrus"
 	"io"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -283,7 +284,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) getWarnings(csvFileRead
 	}
 
 	var warnings []model.MembershipWarning
-	err = csvutil.Unmarshal(csvFile, warnings)
+	err = csvutil.Unmarshal(csvFile, &warnings)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct": "CsvObjectStorageCachedContentSourceRepository",
@@ -423,7 +424,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []mod
 	return relevantWarnings
 }
 
-func (repo *CsvObjectStorageMembershipWarningRepository) Insert(model.MembershipWarning) bool {
+func (repo *CsvObjectStorageMembershipWarningRepository) Insert(warning model.MembershipWarning) bool {
 	now := time.Now()
 	startTime := now.UnixMilli()
 	var warningsToInsert []model.MembershipWarning
@@ -435,30 +436,34 @@ func (repo *CsvObjectStorageMembershipWarningRepository) Insert(model.Membership
 			Bucket: &repo.bucket,
 			Key:    &currentKey,
 		})
-		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct": "CsvObjectStorageMembershipWarningRepository",
-				"func":   "Insert",
-				"err":    err,
-				"bucket": repo.bucket,
-				"key":    currentKey,
-			}).Error("s3 client error")
-			return false
-		}
 
-		warningsToInsert, err = repo.getWarnings(object.Body)
-		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct": "CsvObjectStorageMembershipWarningRepository",
-				"func":   "Insert",
-				"err":    err,
-				"bucket": repo.bucket,
-				"key":    currentKey,
-			}).Error("s3 client error")
-			return false
+		if !strings.Contains(err.Error(), "NoSuchKey") {
+			if err != nil {
+				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+					"struct": "CsvObjectStorageMembershipWarningRepository",
+					"func":   "Insert",
+					"err":    err,
+					"bucket": repo.bucket,
+					"key":    currentKey,
+				}).Error("s3 client error")
+				return false
+			}
+
+			warningsToInsert, err = repo.getWarnings(object.Body)
+			if err != nil {
+				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+					"struct": "CsvObjectStorageMembershipWarningRepository",
+					"func":   "Insert",
+					"err":    err,
+					"bucket": repo.bucket,
+					"key":    currentKey,
+				}).Error("s3 client error")
+				return false
+			}
 		}
 	}
 
+	warningsToInsert = append(warningsToInsert, warning)
 	currentKey := getDateAsString(repo.currentDate)
 	updatedCsvFile, err := csvutil.Marshal(warningsToInsert)
 	if err != nil {
@@ -501,11 +506,15 @@ func (repo *CsvObjectStorageMembershipWarningRepository) Insert(model.Membership
 func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToUnRelevant(warnings ...model.MembershipWarning) bool {
 	now := time.Now()
 	startTime := now.UnixMilli()
-	var warningsToUpdateMap map[int]model.MembershipWarning
+
+	unRelevantWarnings := make(map[int]model.MembershipWarning)
+	for _, warning := range warnings {
+		unRelevantWarnings[warning.UserID] = warning
+	}
+
+	var warningsToUpdateArray []model.MembershipWarning
 	if !isTheSameDate(repo.currentDate, now) {
-		for _, warning := range repo.FindAllRelevant() {
-			warningsToUpdateMap[warning.UserID] = warning
-		}
+		warningsToUpdateArray = repo.FindAllRelevant()
 	} else {
 		currentKey := getDateAsString(repo.currentDate)
 		object, err := repo.client.GetObject(context.TODO(), &s3.GetObjectInput{
@@ -523,7 +532,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToUnRelevant(w
 			return false
 		}
 
-		warnings, err = repo.getWarnings(object.Body)
+		warningsToUpdateArray, err = repo.getWarnings(object.Body)
 		if err != nil {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"struct": "CsvObjectStorageMembershipWarningRepository",
@@ -534,23 +543,12 @@ func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToUnRelevant(w
 			}).Error("s3 client error")
 			return false
 		}
-
-		for _, warning := range warnings {
-			warningsToUpdateMap[warning.UserID] = warning
-		}
 	}
 
-	for _, warning := range warnings {
-		if existingWarning, ok := warningsToUpdateMap[warning.UserID]; ok {
-			existingWarning.IsRelevant = false
+	for index, warning := range warningsToUpdateArray {
+		if _, ok := unRelevantWarnings[warning.UserID]; ok {
+			warningsToUpdateArray[index].IsRelevant = false
 		}
-	}
-
-	warningsToUpdateArray := make([]model.MembershipWarning, len(warningsToUpdateMap))
-	index := 0
-	for _, warning := range warningsToUpdateMap {
-		warningsToUpdateArray[index] = warning
-		index++
 	}
 
 	currentKey := getDateAsString(repo.currentDate)
