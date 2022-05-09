@@ -20,7 +20,7 @@ type CachedPgPhraseRepository struct {
 	cacheRefreshInterval time.Duration
 	lastCacheRefresh     time.Time
 	refreshMutex         sync.Mutex
-	phrases              []model.Phrase
+	phrases              []model.PhrasePg
 }
 
 func NewCachedPgPhraseRepository(db *sqlx.DB, cacheRefreshInterval time.Duration) *CachedPgPhraseRepository {
@@ -30,6 +30,14 @@ func NewCachedPgPhraseRepository(db *sqlx.DB, cacheRefreshInterval time.Duration
 		lastCacheRefresh:     time.Now(),
 		phrases:              nil,
 	}
+}
+
+func (cachedPgPhraseRepository *CachedPgPhraseRepository) castPhrases(phrases []model.PhrasePg) []model.Phrase {
+	result := make([]model.Phrase, len(phrases))
+	for index, value := range phrases {
+		result[index] = value
+	}
+	return result
 }
 
 func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phrase {
@@ -42,9 +50,9 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phra
 		// atomic phrases read
 		phrasesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&cachedPgPhraseRepository.phrases)))
 		if phrasesPtr != nil {
-			phrases := *(*[]model.Phrase)(phrasesPtr)
+			phrases := *(*[]model.PhrasePg)(phrasesPtr)
 			if len(phrases) != 0 {
-				return phrases
+				return cachedPgPhraseRepository.castPhrases(phrases)
 			}
 		}
 	}
@@ -58,7 +66,7 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phra
 			"FROM phrase AS p, phrase_type AS pt " +
 			"WHERE p.type = pt.type_id "
 
-	var updatedPhrases []model.Phrase
+	var updatedPhrases []model.PhrasePg
 	err := cachedPgPhraseRepository.db.Select(&updatedPhrases, query)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
@@ -80,16 +88,22 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phra
 		"struct": "CachedPgPhraseRepository",
 		"func":   "FindAll",
 	}).Info("Phrases cache successfully updated for ", time.Now().UnixMilli()-startTime, "ms")
-	return updatedPhrases
+	return cachedPgPhraseRepository.castPhrases(updatedPhrases)
 }
 
 func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAllByType(phraseType types.PhraseType) []model.Phrase {
 	var phrases []model.Phrase
+	startTime := time.Now().UnixMilli()
 	for _, phrase := range cachedPgPhraseRepository.FindAll() {
-		if phraseType == phrase.PhraseType {
+		if phraseType == phrase.GetPhraseType() {
 			phrases = append(phrases, phrase)
 		}
 	}
+
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"struct": "CachedPgPhraseRepository",
+		"func":   "FindAllByType",
+	}).Info("Found for ", time.Now().UnixMilli()-startTime, "ms")
 	return phrases
 }
 

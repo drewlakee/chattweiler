@@ -38,23 +38,23 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 		}).Error("chat.use.first.name.instead.username parse error")
 	}
 
-	if phrase.IsUserTemplated {
+	if phrase.UserTemplated() {
 		if useFirstNameInsteadUsername {
-			builder.Message(strings.ReplaceAll(phrase.Text, "%username%", fmt.Sprintf("@%s (%s)", user.ScreenName, user.FirstName)))
+			builder.Message(strings.ReplaceAll(phrase.GetText(), "%username%", fmt.Sprintf("@%s (%s)", user.ScreenName, user.FirstName)))
 		} else {
-			builder.Message(strings.ReplaceAll(phrase.Text, "%username%", "@"+user.ScreenName))
+			builder.Message(strings.ReplaceAll(phrase.GetText(), "%username%", "@"+user.ScreenName))
 		}
 	} else {
-		builder.Message(fmt.Sprintf("%s, \n\n%s", "@"+user.ScreenName, phrase.Text))
+		builder.Message(fmt.Sprintf("%s, \n\n%s", "@"+user.ScreenName, phrase.GetText()))
 	}
 
-	if phrase.IsAudioAccompaniment {
-		if phrase.VkAudioId.Valid {
-			builder.Attachment(phrase.VkAudioId.String)
+	if phrase.HasAudioAccompaniment() {
+		if !phrase.NullableVkAudio() {
+			builder.Attachment(phrase.GetVkAudioId())
 		} else {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"func":      "BuildMessageUsingPersonalizedPhrase",
-				"phrase_id": phrase.PhraseID,
+				"phrase_id": phrase.GetID(),
 			}).Warn("phrase is specified with audio accompaniment, but audio_id doesn't pointed")
 		}
 	}
@@ -75,15 +75,15 @@ func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 	builder := params.NewMessagesSendBuilder()
 	builder.PeerID(peerId)
 	builder.RandomID(0)
-	builder.Message(phrase.Text)
+	builder.Message(phrase.GetText())
 
-	if phrase.IsAudioAccompaniment {
-		if phrase.VkAudioId.Valid {
-			builder.Attachment(phrase.VkAudioId.String)
+	if phrase.HasAudioAccompaniment() {
+		if !phrase.NullableVkAudio() {
+			builder.Attachment(phrase.GetVkAudioId())
 		} else {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"func":      "BuildMessagePhrase",
-				"phrase_id": phrase.PhraseID,
+				"phrase_id": phrase.GetID(),
 			}).Warn("pharse specified with audio accompaniment, but audio_id doesn't pointed")
 		}
 	}

@@ -47,7 +47,7 @@ type CsvObjectStorageCachedPhraseRepository struct {
 	cacheRefreshInterval time.Duration
 	lastCacheRefresh     time.Time
 	refreshMutex         sync.Mutex
-	phrases              []model.Phrase
+	phrases              []model.PhraseCsv
 }
 
 func NewCsvObjectStorageCachedPhraseRepository(client *s3.Client, bucket, key string, cacheRefreshInterval time.Duration) *CsvObjectStorageCachedPhraseRepository {
@@ -61,15 +61,23 @@ func NewCsvObjectStorageCachedPhraseRepository(client *s3.Client, bucket, key st
 	}
 }
 
+func (repo *CsvObjectStorageCachedPhraseRepository) castPhrases(phrases []model.PhraseCsv) []model.Phrase {
+	result := make([]model.Phrase, len(phrases))
+	for index, value := range phrases {
+		result[index] = value
+	}
+	return result
+}
+
 func (repo *CsvObjectStorageCachedPhraseRepository) FindAll() []model.Phrase {
 	startTime := time.Now().UnixMilli()
 	if time.Now().Before(repo.lastCacheRefresh.Add(repo.cacheRefreshInterval)) {
 		// atomic phrases read
 		phrasesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&repo.phrases)))
 		if phrasesPtr != nil {
-			phrases := *(*[]model.Phrase)(phrasesPtr)
+			phrases := *(*[]model.PhraseCsv)(phrasesPtr)
 			if len(phrases) != 0 {
-				return phrases
+				return repo.castPhrases(phrases)
 			}
 		}
 	}
@@ -94,7 +102,6 @@ func (repo *CsvObjectStorageCachedPhraseRepository) FindAll() []model.Phrase {
 		return []model.Phrase{}
 	}
 
-	var updatedPhrases []model.Phrase
 	csvFile, err := io.ReadAll(object.Body)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
@@ -108,6 +115,7 @@ func (repo *CsvObjectStorageCachedPhraseRepository) FindAll() []model.Phrase {
 		return []model.Phrase{}
 	}
 
+	var updatedPhrases []model.PhraseCsv
 	err = csvutil.Unmarshal(csvFile, &updatedPhrases)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
@@ -132,13 +140,13 @@ func (repo *CsvObjectStorageCachedPhraseRepository) FindAll() []model.Phrase {
 		"bucket": repo.bucket,
 		"key":    repo.key,
 	}).Info("Cache successfully updated for ", time.Now().UnixMilli()-startTime, "ms")
-	return updatedPhrases
+	return repo.castPhrases(updatedPhrases)
 }
 
 func (repo *CsvObjectStorageCachedPhraseRepository) FindAllByType(phraseType types.PhraseType) []model.Phrase {
 	var phrases []model.Phrase
 	for _, phrase := range repo.FindAll() {
-		if phraseType == phrase.PhraseType {
+		if phraseType == phrase.GetPhraseType() {
 			phrases = append(phrases, phrase)
 		}
 	}
@@ -242,11 +250,18 @@ func (repo *CsvObjectStorageCachedContentSourceRepository) FindAll() []model.Con
 
 func (repo *CsvObjectStorageCachedContentSourceRepository) FindAllByType(sourceType types.ContentSourceType) []model.ContentSource {
 	var contentSources []model.ContentSource
+	startTime := time.Now().UnixMilli()
 	for _, contentSource := range repo.FindAll() {
 		if sourceType == contentSource.SourceType {
 			contentSources = append(contentSources, contentSource)
 		}
 	}
+	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+		"struct": "CsvObjectStorageCachedContentSourceRepository",
+		"func":   "FindAllByType",
+		"bucket": repo.bucket,
+		"key":    repo.key,
+	}).Info("Found for ", time.Now().UnixMilli()-startTime, "ms")
 	return contentSources
 }
 

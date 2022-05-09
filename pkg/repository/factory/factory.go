@@ -136,7 +136,6 @@ func createCsvObjectStorageCachedPhraseRepository() *objectstorage.CsvObjectStor
 	if bucket == "unset" {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createCsvObjectStorageCachedPhraseRepository",
-			"err":  err,
 		}).Fatal("yandex.object.storage.phrases.bucket is unset or parsing error")
 	}
 
@@ -144,7 +143,6 @@ func createCsvObjectStorageCachedPhraseRepository() *objectstorage.CsvObjectStor
 	if key == "unset" {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createCsvObjectStorageCachedPhraseRepository",
-			"err":  err,
 		}).Fatal("yandex.object.storage.phrases.bucket.key is unset or parsing error")
 	}
 
@@ -191,11 +189,10 @@ func createCsvObjectStorageCachedContentSourceRepository() *objectstorage.CsvObj
 		}).Fatal("yandex.object.storage.content.source.cache.refresh.interval is unset or parsing error")
 	}
 
-	bucket := utils.GetEnvOrDefault("yandex.object.storage.phrases.bucket", "unset")
+	bucket := utils.GetEnvOrDefault("yandex.object.storage.content.source.bucket", "unset")
 	if bucket == "unset" {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createCsvObjectStorageCachedContentSourceRepository",
-			"err":  err,
 		}).Fatal("yandex.object.storage.content.source.bucket is unset or parsing error")
 	}
 
@@ -203,7 +200,6 @@ func createCsvObjectStorageCachedContentSourceRepository() *objectstorage.CsvObj
 	if key == "unset" {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createCsvObjectStorageCachedContentSourceRepository",
-			"err":  err,
 		}).Fatal("yandex.object.storage.content.source.bucket.key is unset or parsing error")
 	}
 
