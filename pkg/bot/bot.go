@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"chattweiler/pkg/app/configs/static"
 	"chattweiler/pkg/app/utils"
 	"chattweiler/pkg/repository"
 	"chattweiler/pkg/repository/model/types"
@@ -16,7 +17,6 @@ import (
 	vklpwrapper "github.com/SevereCloud/vksdk/v2/longpoll-user/v3"
 	wrapper "github.com/SevereCloud/vksdk/v2/longpoll-user/v3"
 	"github.com/sirupsen/logrus"
-	"os"
 	"strconv"
 	"time"
 )
@@ -26,12 +26,6 @@ var packageLogFields = logrus.Fields{
 }
 
 type BotCommand string
-
-const (
-	Info           BotCommand = "bark!"
-	AudioRequest   BotCommand = "sing song!"
-	PictureRequest BotCommand = "gimme pic!"
-)
 
 type Bot struct {
 	vkapi                        *api.VK
@@ -50,13 +44,7 @@ func NewBot(
 	membershipWarningsRepo repository.MembershipWarningRepository,
 	contentSourceRepo repository.ContentSourceRepository,
 ) *Bot {
-	vkBotToken := utils.GetEnvOrDefault("vk.community.bot.token", "unset")
-	if vkBotToken == "unset" {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "NewBot",
-		}).Fatal("vk.community.bot.token is unset")
-	}
-
+	vkBotToken := utils.MustGetEnv(static.VkCommunityBotToken)
 	communityVkApi := api.NewVK(vkBotToken)
 
 	mode := vklp.ReceiveAttachments + vklp.ExtendedEvents
@@ -68,87 +56,97 @@ func NewBot(
 		}).Fatal("long poll initialization error")
 	}
 
-	chatId, err := strconv.ParseInt(os.Getenv("vk.community.chat.id"), 10, 64)
+	chatId, err := strconv.ParseInt(utils.MustGetEnv(static.VkCommunityChatID), 10, 64)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
 			"err":  err,
-		}).Fatal("vk.community.chat.id is unset or parse failed")
+			"key":  static.VkCommunityChatID.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
-	communityId, err := strconv.ParseInt(os.Getenv("vk.community.id"), 10, 64)
+	communityId, err := strconv.ParseInt(utils.MustGetEnv(static.VkCommunityID), 10, 64)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
 			"err":  err,
-		}).Fatal("vk.community.id is unset or parse failed")
+			"key":  static.VkCommunityID.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
-	membershipCheckInterval, err := time.ParseDuration(utils.GetEnvOrDefault("chat.warden.membership.check.interval", "10m"))
+	membershipCheckInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.ChatWarderMembershipCheckInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
 			"err":  err,
-		}).Fatal("chat.warden.membership.check.interval parse failed")
+			"key":  static.ChatWarderMembershipCheckInterval.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
-	gracePeriod, err := time.ParseDuration(utils.GetEnvOrDefault("chat.warden.membership.grace.period", "1h"))
+	gracePeriod, err := time.ParseDuration(utils.GetEnvOrDefault(static.ChatWardenMembershipGracePeriod))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
 			"err":  err,
-		}).Fatal("chat.warden.membership.grace.period parse failed")
+			"key":  static.ChatWardenMembershipGracePeriod.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
-	vkUserApi := api.NewVK(utils.GetEnvOrDefault("vk.admin.user.token", ""))
-	audioMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault("content.audio.max.cached.attachments", "100"), 10, 32)
+	vkUserApi := api.NewVK(utils.GetEnvOrDefault(static.VkAdminUserToken))
+	audioMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault(static.ContentAudioMaxCachedAttachments), 10, 32)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
 			"err":  err,
-		}).Fatal("content.audio.max.cached.attachments parse failed")
+			"key":  static.ContentAudioMaxCachedAttachments.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
-	audioCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault("content.audio.cache.refresh.threshold", "0.2"), 32)
+	audioCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault(static.ContentAudioCacheRefreshThreshold), 32)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
 			"err":  err,
-		}).Fatal("content.audio.cache.refresh.threshold parse failed")
+			"key":  static.ContentAudioCacheRefreshThreshold.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
 	audioCollector := random.NewCachedRandomAttachmentsContentCollector(vkUserApi, content.Audio, contentSourceRepo, int(audioMaxCachedAttachments), float32(audioCacheRefreshThreshold))
 
-	audioQueueSize, err := strconv.ParseInt(utils.GetEnvOrDefault("content.audio.queue.size", "100"), 10, 32)
+	audioQueueSize, err := strconv.ParseInt(utils.GetEnvOrDefault(static.ContentAudioQueueSize), 10, 32)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
 			"err":  err,
-		}).Fatal("content.audio.queue.size parse failed")
+			"key":  static.ContentAudioQueueSize.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
-	pictureQueueSize, err := strconv.ParseInt(utils.GetEnvOrDefault("content.picture.queue.size", "100"), 10, 32)
+	pictureQueueSize, err := strconv.ParseInt(utils.GetEnvOrDefault(static.ContentPictureQueueSize), 10, 32)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
 			"err":  err,
-		}).Fatal("content.picture.queue.size parse failed")
+			"key":  static.ContentPictureQueueSize.Key,
+		}).Fatal("content.picture.queue.size parsing is failed")
 	}
 
-	pictureMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault("content.picture.max.cached.attachments", "100"), 10, 32)
+	pictureMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault(static.ContentPictureMaxCachedAttachments), 10, 32)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
 			"err":  err,
-		}).Fatal("content.picture.max.cached.attachments parse failed")
+			"key":  static.ContentPictureMaxCachedAttachments.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
-	pictureCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault("content.picture.cache.refresh.threshold", "0.2"), 32)
+	pictureCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault(static.ContentPictureCacheRefreshThreshold), 32)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
 			"err":  err,
-		}).Fatal("content.picture.cache.refresh.threshold parse failed")
+			"key":  static.ContentPictureCacheRefreshThreshold.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
 	pictureCollector := random.NewCachedRandomAttachmentsContentCollector(vkUserApi, content.Photo, contentSourceRepo, int(pictureMaxCachedAttachments), float32(pictureCacheRefreshThreshold))
@@ -167,20 +165,22 @@ func NewBot(
 }
 
 func (bot *Bot) Start() {
-	welcomeNewMembers, err := strconv.ParseBool(utils.GetEnvOrDefault("bot.functionality.welcome.new.members", "true"))
+	welcomeNewMembers, err := strconv.ParseBool(utils.GetEnvOrDefault(static.BotFunctionalityWelcomeNewMembers))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "Start",
 			"err":  err,
-		}).Fatal("bot.functionality.welcome.new.members parse error")
+			"key":  static.BotFunctionalityWelcomeNewMembers.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
-	goodbyeMembers, err := strconv.ParseBool(utils.GetEnvOrDefault("bot.functionality.goodbye.members", "true"))
+	goodbyeMembers, err := strconv.ParseBool(utils.GetEnvOrDefault(static.BotFunctionalityGoodbyeMembers))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "Start",
 			"err":  err,
-		}).Fatal("bot.functionality.goodbye.members parse error")
+			"key":  static.BotFunctionalityGoodbyeMembers.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
 	bot.vklpwrapper.OnChatInfoChange(func(event wrapper.ChatInfoChange) {
@@ -196,12 +196,13 @@ func (bot *Bot) Start() {
 		}
 	})
 
-	audioRequests, err := strconv.ParseBool(utils.GetEnvOrDefault("bot.functionality.audio.requests", "false"))
+	audioRequests, err := strconv.ParseBool(utils.GetEnvOrDefault(static.BotFunctionalityAudioRequests))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "Start",
 			"err":  err,
-		}).Fatal("bot.functionality.audio.requests parse error")
+			"key":  static.BotFunctionalityGoodbyeMembers.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
 	if audioRequests {
@@ -209,12 +210,13 @@ func (bot *Bot) Start() {
 		go bot.audioContentCourier.ReceiveAndDeliver(types.AudioRequest, content.Audio, bot.audioContentCourierChannel)
 	}
 
-	pictureRequests, err := strconv.ParseBool(utils.GetEnvOrDefault("bot.functionality.picture.requests", "false"))
+	pictureRequests, err := strconv.ParseBool(utils.GetEnvOrDefault(static.BotFunctionalityPictureRequests))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "Start",
 			"err":  err,
-		}).Fatal("bot.functionality.picture.requests parse error")
+			"key":  static.BotFunctionalityPictureRequests.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
 	if pictureRequests {
@@ -222,9 +224,9 @@ func (bot *Bot) Start() {
 		go bot.pictureContentCourier.ReceiveAndDeliver(types.PictureRequest, content.Photo, bot.pictureContentCourierChannel)
 	}
 
-	infoCommand := utils.GetEnvOrDefault("bot.command.override.info", string(Info))
-	audioRequestCommand := utils.GetEnvOrDefault("bot.command.override.audio.request", string(AudioRequest))
-	pictureRequestCommand := utils.GetEnvOrDefault("bot.command.override.picture.request", string(PictureRequest))
+	infoCommand := utils.GetEnvOrDefault(static.BotCommandOverrideInfo)
+	audioRequestCommand := utils.GetEnvOrDefault(static.BotCommandOverrideAudioRequest)
+	pictureRequestCommand := utils.GetEnvOrDefault(static.BotCommandOverridePictureRequest)
 
 	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 		"func": "Start",
@@ -260,12 +262,13 @@ func (bot *Bot) Start() {
 		}
 	})
 
-	checkMembership, err := strconv.ParseBool(utils.GetEnvOrDefault("bot.functionality.membership.checking", "true"))
+	checkMembership, err := strconv.ParseBool(utils.GetEnvOrDefault(static.BotFunctionalityMembershipChecking))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "Start",
 			"err":  err,
-		}).Fatal("bot.functionality.membership.checking parse error")
+			"key":  static.BotFunctionalityMembershipChecking.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
 	if checkMembership {
@@ -281,7 +284,7 @@ func (bot *Bot) Start() {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "Start",
 			"err":  err,
-		}).Fatal("bot crashed")
+		}).Fatal("bot is crashed")
 	}
 }
 
@@ -292,7 +295,7 @@ func (bot *Bot) handleChatUserJoinEvent(event wrapper.ChatInfoChange) {
 			"struct": "Bot",
 			"func":   "handleChatUserJoinEvent",
 			"err":    err,
-		}).Error("message send error")
+		}).Error("message sending error")
 		return
 	}
 
@@ -313,7 +316,7 @@ func (bot *Bot) handleChatUserJoinEvent(event wrapper.ChatInfoChange) {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct": "Bot",
 			"func":   "handleChatUserJoinEvent",
-		}).Warn("message doesn't have any phrase for join event, join event ignored")
+		}).Warn("message doesn't have any phrase for a join event")
 		return
 	}
 
@@ -323,7 +326,7 @@ func (bot *Bot) handleChatUserJoinEvent(event wrapper.ChatInfoChange) {
 			"struct": "Bot",
 			"func":   "handleChatUserJoinEvent",
 			"err":    err,
-		}).Error("message send error")
+		}).Error("message sending error")
 	}
 }
 
@@ -355,7 +358,7 @@ func (bot *Bot) handleChatUserLeavingEvent(event wrapper.ChatInfoChange) {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct": "Bot",
 			"func":   "handleChatUserLeavingEvent",
-		}).Warn("message doesn't have any phrase for leaving event, leaving event ignored")
+		}).Warn("message doesn't have any phrase for a leaving event")
 		return
 	}
 
@@ -365,7 +368,7 @@ func (bot *Bot) handleChatUserLeavingEvent(event wrapper.ChatInfoChange) {
 			"struct": "Bot",
 			"func":   "handleChatUserLeavingEvent",
 			"err":    err,
-		}).Error("message send error")
+		}).Error("message sending error")
 	}
 }
 
@@ -378,7 +381,7 @@ func (bot *Bot) handleInfoCommand(event wrapper.NewMessage) {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "handleInfoCommand",
 			"err":  err,
-		}).Error("message send error")
+		}).Error("message sending error")
 	}
 }
 

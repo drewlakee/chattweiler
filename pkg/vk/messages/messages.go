@@ -1,6 +1,7 @@
 package messages
 
 import (
+	"chattweiler/pkg/app/configs/static"
 	"chattweiler/pkg/app/utils"
 	"chattweiler/pkg/repository/model"
 	"chattweiler/pkg/repository/model/types"
@@ -24,7 +25,7 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func":       "BuildMessageUsingPersonalizedPhrase",
 			"phraseType": phrasesType,
-		}).Warn("Were passed empty phrases, but a message supposed to be with a phrase")
+		}).Warn("were passed empty phrases, but a message supposed to be with a phrase")
 	}
 
 	builder := params.NewMessagesSendBuilder()
@@ -35,11 +36,12 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 		return builder.Params
 	}
 
-	useFirstNameInsteadUsername, err := strconv.ParseBool(utils.GetEnvOrDefault("chat.use.first.name.instead.username", "false"))
+	useFirstNameInsteadUsername, err := strconv.ParseBool(utils.GetEnvOrDefault(static.ChatUseFirstNameInsteadUsername))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "BuildMessageUsingPersonalizedPhrase",
-		}).Error("chat.use.first.name.instead.username parse error")
+			"key":  static.ChatUseFirstNameInsteadUsername.Key,
+		}).Error("parsing of env variable is failed")
 	}
 
 	if phrase.UserTemplated() {
@@ -88,7 +90,7 @@ func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"func":      "BuildMessagePhrase",
 				"phrase_id": phrase.GetID(),
-			}).Warn("pharse specified with audio accompaniment, but audio_id doesn't pointed")
+			}).Warn("phrase must be with audio, but there is no audio attachment")
 		}
 	}
 

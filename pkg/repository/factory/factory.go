@@ -1,6 +1,7 @@
 package factory
 
 import (
+	"chattweiler/pkg/app/configs/static"
 	"chattweiler/pkg/app/utils"
 	"chattweiler/pkg/repository"
 	"chattweiler/pkg/repository/pg"
@@ -29,12 +30,7 @@ var pgConnectionSingleton *sqlx.DB
 var objectStorageClientSingleton *s3.Client
 
 func getPostgresqlConnection() *sqlx.DB {
-	pgDataSourceString := utils.GetEnvOrDefault("pg.datasource.string", "unset")
-	if pgDataSourceString == "unset" {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "getPostgresqlConnection",
-		}).Fatal("pg.datasource.string is unset")
-	}
+	pgDataSourceString := utils.MustGetEnv(static.PgDatasourceString)
 
 	if pgConnectionSingleton != nil {
 		return pgConnectionSingleton
@@ -45,7 +41,7 @@ func getPostgresqlConnection() *sqlx.DB {
 		logrus.WithFields(packageLogFields).WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "getPostgresqlConnection",
 			"err":  err,
-		}).Fatal("Postgres connection error")
+		}).Fatal("postgres connection error")
 	}
 
 	return pgConnectionSingleton
@@ -64,40 +60,20 @@ func getObjectStorageClient() *s3.Client {
 		}, nil
 	})
 
-	yandexObjectStorageAccessKeyID := utils.GetEnvOrDefault("yandex.object.storage.access.key.id", "unset")
-	if yandexObjectStorageAccessKeyID == "unset" {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "getObjectStorageClient",
-		}).Fatal("yandex.object.storage.access.key.id is unset")
-	}
-
-	yandexObjectStorageSecretAccessKey := utils.GetEnvOrDefault("yandex.object.storage.secret.access.key", "unset")
-	if yandexObjectStorageSecretAccessKey == "unset" {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "getObjectStorageClient",
-		}).Fatal("yandex.object.storage.secret.access.key is unset")
-	}
-
 	credentialsProvider := aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
 		return aws.Credentials{
-			AccessKeyID:     yandexObjectStorageAccessKeyID,
-			SecretAccessKey: yandexObjectStorageSecretAccessKey,
+			AccessKeyID:     utils.MustGetEnv(static.YandexObjectStorageAccessKeyID),
+			SecretAccessKey: utils.MustGetEnv(static.YandexObjectStorageSecretAccessKey),
 		}, nil
 	})
-
-	yandexObjectStorageRegion := utils.GetEnvOrDefault("yandex.object.storage.region", "unset")
-	if yandexObjectStorageRegion == "unset" {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "getObjectStorageClient",
-		}).Fatal("yandex.object.storage.region is unset")
-	}
 
 	cfg, err := config.LoadDefaultConfig(
 		context.TODO(),
 		config.WithEndpointResolverWithOptions(customResolver),
-		config.WithRegion(yandexObjectStorageRegion),
+		config.WithRegion(utils.MustGetEnv(static.YandexObjectStorageRegion)),
 		config.WithCredentialsProvider(credentialsProvider),
 	)
+
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "getObjectStorageClient",
@@ -124,43 +100,31 @@ func CreatePhraseRepository(repoType RepositoryType) repository.PhraseRepository
 }
 
 func createCsvObjectStorageCachedPhraseRepository() *objectstorage.CsvObjectStorageCachedPhraseRepository {
-	cacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault("yandex.object.storage.phrases.cache.refresh.interval", "15m"))
+	cacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.YandexObjectStoragePhrasesCacheRefreshInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createCsvObjectStorageCachedPhraseRepository",
 			"err":  err,
-		}).Fatal("yandex.object.storage.phrases.cache.refresh.interval is unset or parsing error")
-	}
-
-	bucket := utils.GetEnvOrDefault("yandex.object.storage.phrases.bucket", "unset")
-	if bucket == "unset" {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "createCsvObjectStorageCachedPhraseRepository",
-		}).Fatal("yandex.object.storage.phrases.bucket is unset or parsing error")
-	}
-
-	key := utils.GetEnvOrDefault("yandex.object.storage.phrases.bucket.key", "unset")
-	if key == "unset" {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "createCsvObjectStorageCachedPhraseRepository",
-		}).Fatal("yandex.object.storage.phrases.bucket.key is unset or parsing error")
+			"key":  static.YandexObjectStoragePhrasesCacheRefreshInterval.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
 	return objectstorage.NewCsvObjectStorageCachedPhraseRepository(
 		getObjectStorageClient(),
-		bucket,
-		key,
+		utils.MustGetEnv(static.YandexObjectStoragePhrasesBucket),
+		utils.MustGetEnv(static.YandexObjectStoragePhrasesBucketKey),
 		cacheRefreshInterval,
 	)
 }
 
 func createPostgresqlCachedPhraseRepository() repository.PhraseRepository {
-	pgPhrasesCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault("pg.phrases.cache.refresh.interval", "15m"))
+	pgPhrasesCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.PgPhrasesCacheRefreshInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createPostgresqlCachedPhraseRepository",
 			"err":  err,
-		}).Fatal("pg.phrases.cache.refresh.interval parse error")
+			"key":  static.PgPhrasesCacheRefreshInterval.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
 	return pg.NewCachedPgPhraseRepository(getPostgresqlConnection(), pgPhrasesCacheRefreshInterval)
@@ -181,43 +145,31 @@ func CreateContentSourceRepository(repoType RepositoryType) repository.ContentSo
 }
 
 func createCsvObjectStorageCachedContentSourceRepository() *objectstorage.CsvObjectStorageCachedContentSourceRepository {
-	cacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault("yandex.object.storage.content.source.cache.refresh.interval", "15m"))
+	cacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.YandexObjectStorageContentSourceCacheRefreshInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createCsvObjectStorageCachedContentSourceRepository",
 			"err":  err,
-		}).Fatal("yandex.object.storage.content.source.cache.refresh.interval is unset or parsing error")
-	}
-
-	bucket := utils.GetEnvOrDefault("yandex.object.storage.content.source.bucket", "unset")
-	if bucket == "unset" {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "createCsvObjectStorageCachedContentSourceRepository",
-		}).Fatal("yandex.object.storage.content.source.bucket is unset or parsing error")
-	}
-
-	key := utils.GetEnvOrDefault("yandex.object.storage.content.source.bucket.key", "unset")
-	if key == "unset" {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "createCsvObjectStorageCachedContentSourceRepository",
-		}).Fatal("yandex.object.storage.content.source.bucket.key is unset or parsing error")
+			"key":  static.YandexObjectStorageContentSourceCacheRefreshInterval.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
 	return objectstorage.NewCsvObjectStorageCachedContentSourceRepository(
 		getObjectStorageClient(),
-		bucket,
-		key,
+		utils.MustGetEnv(static.YandexObjectStorageContentSourceBucket),
+		utils.MustGetEnv(static.YandexObjectStorageContentSourceBucketKey),
 		cacheRefreshInterval,
 	)
 }
 
 func createPostgresqlCachedContentSourceRepository() repository.ContentSourceRepository {
-	pgContentSourceCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault("pg.content.source.cache.refresh.interval", "15m"))
+	pgContentSourceCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.PgContentSourceCacheRefreshInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createPostgresqlCachedContentSourceRepository",
 			"err":  err,
-		}).Fatal("pg.content.source.cache.refresh.interval parse error")
+			"key":  static.PgContentSourceCacheRefreshInterval.Key,
+		}).Fatal("parsing of env variable is failed")
 	}
 
 	return pg.NewCachedPgContentSourceRepository(getPostgresqlConnection(), pgContentSourceCacheRefreshInterval)
@@ -238,15 +190,8 @@ func CreateMembershipWarningRepository(repoType RepositoryType) repository.Membe
 }
 
 func createCsvObjectStorageMembershipWarningRepository() *objectstorage.CsvObjectStorageMembershipWarningRepository {
-	bucket := utils.GetEnvOrDefault("yandex.object.storage.membership.warning.bucket", "unset")
-	if bucket == "unset" {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "createCsvObjectStorageMembershipWarningRepository",
-		}).Fatal("yandex.object.storage.membership.warning.bucket is unset or parsing error")
-	}
-
 	return objectstorage.NewCsvObjectStorageMembershipWarningRepository(
 		getObjectStorageClient(),
-		bucket,
+		utils.MustGetEnv(static.YandexObjectStorageMembershipWarningBucket),
 	)
 }
