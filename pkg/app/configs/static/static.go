@@ -8,13 +8,14 @@ var VkCommunityChatID = configs.NewMandatoryConfig("vk.community.chat.id")
 var VkAdminUserToken = configs.NewOptionalConfig("vk.admin.user.token", "")
 
 var PgDatasourceString = configs.NewMandatoryConfig("pg.datasource.string")
-var PgPhrasesCacheRefreshInterval = configs.NewOptionalConfig("pg.phrases.cache.refresh.interval", "15m")
-var PgContentSourceCacheRefreshInterval = configs.NewOptionalConfig("pg.content.source.cache.refresh.interval", "15m")
 
 var ChatWarderMembershipCheckInterval = configs.NewOptionalConfig("chat.warden.membership.check.interval", "10m")
 var ChatWardenMembershipGracePeriod = configs.NewOptionalConfig("chat.warden.membership.grace.period", "1h")
 var ChatUseFirstNameInsteadUsername = configs.NewOptionalConfig("chat.use.first.name.instead.username", "false")
 
+var PhrasesCacheRefreshInterval = configs.NewOptionalConfig("phrases.cache.refresh.interval", "15m")
+
+var ContentSourceCacheRefreshInterval = configs.NewOptionalConfig("content.source.cache.refresh.interval", "15m")
 var ContentAudioMaxCachedAttachments = configs.NewOptionalConfig("content.audio.max.cached.attachments", "100")
 var ContentAudioCacheRefreshThreshold = configs.NewOptionalConfig("content.audio.cache.refresh.threshold", "0.2")
 var ContentAudioQueueSize = configs.NewOptionalConfig("content.audio.queue.size", "100")
@@ -34,10 +35,8 @@ var BotFunctionalityPictureRequests = configs.NewOptionalConfig("bot.functionali
 var YandexObjectStorageAccessKeyID = configs.NewMandatoryConfig("yandex.object.storage.access.key.id")
 var YandexObjectStorageSecretAccessKey = configs.NewMandatoryConfig("yandex.object.storage.secret.access.key")
 var YandexObjectStorageRegion = configs.NewMandatoryConfig("yandex.object.storage.region")
-var YandexObjectStoragePhrasesCacheRefreshInterval = configs.NewOptionalConfig("yandex.object.storage.phrases.cache.refresh.interval", "15m")
 var YandexObjectStoragePhrasesBucket = configs.NewMandatoryConfig("yandex.object.storage.phrases.bucket")
 var YandexObjectStoragePhrasesBucketKey = configs.NewMandatoryConfig("yandex.object.storage.phrases.bucket.key")
-var YandexObjectStorageContentSourceCacheRefreshInterval = configs.NewOptionalConfig("yandex.object.storage.content.source.cache.refresh.interval", "15m")
 var YandexObjectStorageContentSourceBucket = configs.NewMandatoryConfig("yandex.object.storage.content.source.bucket")
 var YandexObjectStorageContentSourceBucketKey = configs.NewMandatoryConfig("yandex.object.storage.content.source.bucket.key")
 var YandexObjectStorageMembershipWarningBucket = configs.NewMandatoryConfig("yandex.object.storage.membership.warning.bucket")

@@ -7,12 +7,13 @@ import (
 	"chattweiler/pkg/repository/pg"
 	objectstorage "chattweiler/pkg/repository/yandex/s3"
 	"context"
+	"time"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
-	"time"
 )
 
 var packageLogFields = logrus.Fields{
@@ -100,12 +101,12 @@ func CreatePhraseRepository(repoType RepositoryType) repository.PhraseRepository
 }
 
 func createCsvObjectStorageCachedPhraseRepository() *objectstorage.CsvObjectStorageCachedPhraseRepository {
-	cacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.YandexObjectStoragePhrasesCacheRefreshInterval))
+	cacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.PhrasesCacheRefreshInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createCsvObjectStorageCachedPhraseRepository",
 			"err":  err,
-			"key":  static.YandexObjectStoragePhrasesCacheRefreshInterval.Key,
+			"key":  static.PhrasesCacheRefreshInterval.Key,
 		}).Fatal("parsing of env variable is failed")
 	}
 
@@ -118,12 +119,12 @@ func createCsvObjectStorageCachedPhraseRepository() *objectstorage.CsvObjectStor
 }
 
 func createPostgresqlCachedPhraseRepository() repository.PhraseRepository {
-	pgPhrasesCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.PgPhrasesCacheRefreshInterval))
+	pgPhrasesCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.PhrasesCacheRefreshInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createPostgresqlCachedPhraseRepository",
 			"err":  err,
-			"key":  static.PgPhrasesCacheRefreshInterval.Key,
+			"key":  static.PhrasesCacheRefreshInterval.Key,
 		}).Fatal("parsing of env variable is failed")
 	}
 
@@ -145,12 +146,12 @@ func CreateContentSourceRepository(repoType RepositoryType) repository.ContentSo
 }
 
 func createCsvObjectStorageCachedContentSourceRepository() *objectstorage.CsvObjectStorageCachedContentSourceRepository {
-	cacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.YandexObjectStorageContentSourceCacheRefreshInterval))
+	cacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.ContentSourceCacheRefreshInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createCsvObjectStorageCachedContentSourceRepository",
 			"err":  err,
-			"key":  static.YandexObjectStorageContentSourceCacheRefreshInterval.Key,
+			"key":  static.ContentSourceCacheRefreshInterval.Key,
 		}).Fatal("parsing of env variable is failed")
 	}
 
@@ -163,12 +164,12 @@ func createCsvObjectStorageCachedContentSourceRepository() *objectstorage.CsvObj
 }
 
 func createPostgresqlCachedContentSourceRepository() repository.ContentSourceRepository {
-	pgContentSourceCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.PgContentSourceCacheRefreshInterval))
+	pgContentSourceCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.ContentSourceCacheRefreshInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createPostgresqlCachedContentSourceRepository",
 			"err":  err,
-			"key":  static.PgContentSourceCacheRefreshInterval.Key,
+			"key":  static.ContentSourceCacheRefreshInterval.Key,
 		}).Fatal("parsing of env variable is failed")
 	}
 
