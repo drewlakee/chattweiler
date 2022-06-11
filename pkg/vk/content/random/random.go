@@ -1,16 +1,17 @@
 package random
 
 import (
+	"chattweiler/pkg/app/utils/math"
 	"chattweiler/pkg/repository"
 	"chattweiler/pkg/repository/model"
 	"chattweiler/pkg/repository/model/types"
-	"chattweiler/pkg/utils/math"
 	"chattweiler/pkg/vk/content"
+	"math/rand"
+	"time"
+
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/object"
 	"github.com/sirupsen/logrus"
-	"math/rand"
-	"time"
 )
 
 var packageLogFields = logrus.Fields{
