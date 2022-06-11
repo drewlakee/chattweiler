@@ -2,3 +2,5 @@
 
 # environment variables files
 *.env
+
+.vscode
