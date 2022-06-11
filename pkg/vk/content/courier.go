@@ -1,32 +1,27 @@
-package courier
+package content
 
 import (
 	"chattweiler/pkg/repository"
-	"chattweiler/pkg/repository/model/types"
+	"chattweiler/pkg/repository/model"
 	"chattweiler/pkg/vk"
-	"chattweiler/pkg/vk/content"
-	"chattweiler/pkg/vk/messages"
+
 	"github.com/SevereCloud/vksdk/v2/api"
 	lpwrapper "github.com/SevereCloud/vksdk/v2/longpoll-user/v3"
 	"github.com/SevereCloud/vksdk/v2/object"
 	"github.com/sirupsen/logrus"
 )
 
-var packageLogFields = logrus.Fields{
-	"package": "courier",
-}
-
 type MediaContentCourier struct {
 	communityVkApi              *api.VK
 	userVkApi                   *api.VK
-	attachmentsContentCollector content.AttachmentsContentCollector
+	attachmentsContentCollector AttachmentsContentCollector
 	phrasesRepo                 repository.PhraseRepository
 }
 
 func NewMediaContentCourier(
 	communityVkApi,
 	userVkApi *api.VK,
-	attachmentsContentCollector content.AttachmentsContentCollector,
+	attachmentsContentCollector AttachmentsContentCollector,
 	phrasesRepo repository.PhraseRepository,
 ) *MediaContentCourier {
 	return &MediaContentCourier{
@@ -37,7 +32,7 @@ func NewMediaContentCourier(
 	}
 }
 
-func (courier *MediaContentCourier) ReceiveAndDeliver(deliverPhraseType types.PhraseType, deliverContentType content.AttachmentsType, contentRequestChannel <-chan lpwrapper.NewMessage) {
+func (courier *MediaContentCourier) ReceiveAndDeliver(deliverPhraseType model.PhraseType, deliverContentType AttachmentsType, contentRequestChannel <-chan lpwrapper.NewMessage) {
 	for {
 		select {
 		case requestMessage := <-contentRequestChannel:
@@ -52,7 +47,7 @@ func (courier *MediaContentCourier) ReceiveAndDeliver(deliverPhraseType types.Ph
 				continue
 			}
 
-			apiParams := messages.BuildMessageUsingPersonalizedPhrase(
+			apiParams := vk.BuildMessageUsingPersonalizedPhrase(
 				requestMessage.PeerID,
 				user,
 				deliverPhraseType,
@@ -82,11 +77,11 @@ func (courier *MediaContentCourier) ReceiveAndDeliver(deliverPhraseType types.Ph
 	}
 }
 
-func (courier *MediaContentCourier) resolveContentID(mediaContent object.WallWallpostAttachment, deliverContentType content.AttachmentsType) string {
+func (courier *MediaContentCourier) resolveContentID(mediaContent object.WallWallpostAttachment, deliverContentType AttachmentsType) string {
 	switch deliverContentType {
-	case content.Audio:
+	case AudioType:
 		return mediaContent.Audio.ToAttachment()
-	case content.Photo:
+	case PhotoType:
 		return mediaContent.Photo.ToAttachment()
 	}
 

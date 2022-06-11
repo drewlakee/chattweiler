@@ -1,4 +1,4 @@
-package math
+package utils
 
 func ClampFloat32(value float32, left float32, right float32) float32 {
 	if value > right {

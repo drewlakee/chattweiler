@@ -1,10 +1,11 @@
 package main
 
 import (
-	"chattweiler/pkg/app/configs/static"
-	"chattweiler/pkg/app/utils"
 	"chattweiler/pkg/bot"
-	"chattweiler/pkg/repository/factory"
+	"chattweiler/pkg/configs"
+	"chattweiler/pkg/repository"
+	"chattweiler/pkg/utils"
+
 	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 )
@@ -12,16 +13,16 @@ import (
 func main() {
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 
-	var createRepositoryType factory.RepositoryType
-	if utils.GetEnvOrDefault(static.PgDatasourceString) != "" {
-		createRepositoryType = factory.Postgresql
+	var createRepositoryType repository.RepositoryType
+	if utils.GetEnvOrDefault(configs.PgDatasourceString) != "" {
+		createRepositoryType = repository.Postgresql
 	} else {
-		createRepositoryType = factory.CsvYandexObjectStorage
+		createRepositoryType = repository.CsvYandexObjectStorage
 	}
 
 	bot.NewBot(
-		factory.CreatePhraseRepository(createRepositoryType),
-		factory.CreateMembershipWarningRepository(createRepositoryType),
-		factory.CreateContentSourceRepository(createRepositoryType),
+		repository.CreatePhraseRepository(createRepositoryType),
+		repository.CreateMembershipWarningRepository(createRepositoryType),
+		repository.CreateContentSourceRepository(createRepositoryType),
 	).Start()
 }

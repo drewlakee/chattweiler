@@ -1,10 +1,11 @@
 package utils
 
 import (
-	"chattweiler/pkg/app/configs"
-	"github.com/sirupsen/logrus"
+	"chattweiler/pkg/configs"
 	"os"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 var packageLogFields = logrus.Fields{

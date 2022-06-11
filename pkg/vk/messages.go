@@ -1,25 +1,21 @@
-package messages
+package vk
 
 import (
-	"chattweiler/pkg/app/configs/static"
-	"chattweiler/pkg/app/utils"
+	"chattweiler/pkg/configs"
 	"chattweiler/pkg/repository/model"
-	"chattweiler/pkg/repository/model/types"
 	"chattweiler/pkg/roulette"
+	"chattweiler/pkg/utils"
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/api/params"
 	"github.com/SevereCloud/vksdk/v2/object"
 	"github.com/sirupsen/logrus"
-	"strconv"
-	"strings"
 )
 
-var packageLogFields = logrus.Fields{
-	"package": "messages",
-}
-
-func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phrasesType types.PhraseType, phrases []model.Phrase) api.Params {
+func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phrasesType model.PhraseType, phrases []model.Phrase) api.Params {
 	phrase := roulette.Spin(phrases...)
 	if phrase == nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
@@ -36,11 +32,11 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 		return builder.Params
 	}
 
-	useFirstNameInsteadUsername, err := strconv.ParseBool(utils.GetEnvOrDefault(static.ChatUseFirstNameInsteadUsername))
+	useFirstNameInsteadUsername, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.ChatUseFirstNameInsteadUsername))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "BuildMessageUsingPersonalizedPhrase",
-			"key":  static.ChatUseFirstNameInsteadUsername.Key,
+			"key":  configs.ChatUseFirstNameInsteadUsername.Key,
 		}).Error("parsing of env variable is failed")
 	}
 

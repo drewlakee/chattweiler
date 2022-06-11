@@ -1,21 +1,16 @@
-package membership
+package vk
 
 import (
 	"chattweiler/pkg/repository"
 	"chattweiler/pkg/repository/model"
-	"chattweiler/pkg/repository/model/types"
-	"chattweiler/pkg/vk/messages"
+	"strconv"
+	"time"
+
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/api/params"
 	"github.com/SevereCloud/vksdk/v2/object"
 	"github.com/sirupsen/logrus"
-	"strconv"
-	"time"
 )
-
-var packageLogFields = logrus.Fields{
-	"package": "membership",
-}
 
 type Checker struct {
 	// https://dev.vk.com/method/messages.getConversationsById
@@ -132,11 +127,11 @@ func (checker *Checker) checkChatForNewWarning(members map[int]object.UsersUser,
 			checker.membershipWarningsRepo.Insert(newWarning)
 
 			peerId := 2000000000 + int(checker.conversationId)
-			_, err := checker.vkapi.MessagesSend(messages.BuildMessageUsingPersonalizedPhrase(
+			_, err := checker.vkapi.MessagesSend(BuildMessageUsingPersonalizedPhrase(
 				peerId,
 				&userProfile,
-				types.MembershipWarning,
-				checker.phrasesRepo.FindAllByType(types.MembershipWarning),
+				model.MembershipWarninType,
+				checker.phrasesRepo.FindAllByType(model.MembershipWarninType),
 			))
 			if err != nil {
 				return err

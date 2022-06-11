@@ -1,19 +1,15 @@
-package pg
+package repository
 
 import (
 	"chattweiler/pkg/repository/model"
-	"chattweiler/pkg/repository/model/types"
-	"github.com/jmoiron/sqlx"
-	"github.com/sirupsen/logrus"
 	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
-)
 
-var packageLogFields = logrus.Fields{
-	"package": "pg",
-}
+	"github.com/jmoiron/sqlx"
+	"github.com/sirupsen/logrus"
+)
 
 type CachedPgPhraseRepository struct {
 	db                   *sqlx.DB
@@ -91,7 +87,7 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phra
 	return cachedPgPhraseRepository.castPhrases(updatedPhrases)
 }
 
-func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAllByType(phraseType types.PhraseType) []model.Phrase {
+func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAllByType(phraseType model.PhraseType) []model.Phrase {
 	var phrases []model.Phrase
 	for _, phrase := range cachedPgPhraseRepository.FindAll() {
 		if phraseType == phrase.GetPhraseType() {
@@ -274,7 +270,7 @@ func (cachedPgContentSourceRepository *CachedPgContentSourceRepository) FindAll(
 	return updatedContentSources
 }
 
-func (cachedPgContentSourceRepository *CachedPgContentSourceRepository) FindAllByType(sourceType types.ContentSourceType) []model.ContentSource {
+func (cachedPgContentSourceRepository *CachedPgContentSourceRepository) FindAllByType(sourceType model.ContentSourceType) []model.ContentSource {
 	var contentSources []model.ContentSource
 	for _, contentSource := range cachedPgContentSourceRepository.FindAll() {
 		if sourceType == contentSource.SourceType {

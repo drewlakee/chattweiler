@@ -1,4 +1,4 @@
-package events
+package vk
 
 import wrapper "github.com/SevereCloud/vksdk/v2/longpoll-user/v3"
 

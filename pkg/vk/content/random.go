@@ -1,11 +1,9 @@
-package random
+package content
 
 import (
-	"chattweiler/pkg/app/utils/math"
 	"chattweiler/pkg/repository"
 	"chattweiler/pkg/repository/model"
-	"chattweiler/pkg/repository/model/types"
-	"chattweiler/pkg/vk/content"
+	"chattweiler/pkg/utils"
 	"math/rand"
 	"time"
 
@@ -14,13 +12,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var packageLogFields = logrus.Fields{
-	"package": "random",
-}
-
 type CachedRandomAttachmentsContentCollector struct {
 	client                *api.VK
-	attachmentsType       content.AttachmentsType
+	attachmentsType       AttachmentsType
 	contentSourceRepo     repository.ContentSourceRepository
 	maxCachedAttachments  int
 	cachedAttachments     []object.WallWallpostAttachment
@@ -30,7 +24,7 @@ type CachedRandomAttachmentsContentCollector struct {
 
 func NewCachedRandomAttachmentsContentCollector(
 	client *api.VK,
-	attachmentsType content.AttachmentsType,
+	attachmentsType AttachmentsType,
 	contentSourceRepo repository.ContentSourceRepository,
 	maxCachedAttachments int,
 	cacheRefreshThreshold float32,
@@ -41,7 +35,7 @@ func NewCachedRandomAttachmentsContentCollector(
 		contentSourceRepo:     contentSourceRepo,
 		maxCachedAttachments:  maxCachedAttachments,
 		cachedAttachments:     nil,
-		cacheRefreshThreshold: math.ClampFloat32(cacheRefreshThreshold, 0.0, 1.0),
+		cacheRefreshThreshold: utils.ClampFloat32(cacheRefreshThreshold, 0.0, 1.0),
 
 		// https://dev.vk.com/method/wall.get#count parameters' constraints
 		maxContentFetchBound: 100,
@@ -157,10 +151,10 @@ func (collector *CachedRandomAttachmentsContentCollector) getRandomSource() mode
 
 	var contentSources []model.ContentSource
 	switch collector.attachmentsType {
-	case content.Audio:
-		contentSources = collector.contentSourceRepo.FindAllByType(types.Audio)
-	case content.Photo:
-		contentSources = collector.contentSourceRepo.FindAllByType(types.Picture)
+	case AudioType:
+		contentSources = collector.contentSourceRepo.FindAllByType(model.AudioType)
+	case PhotoType:
+		contentSources = collector.contentSourceRepo.FindAllByType(model.PictureType)
 	default:
 		contentSources = []model.ContentSource{}
 	}

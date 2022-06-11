@@ -1,12 +1,19 @@
 package content
 
-import "github.com/SevereCloud/vksdk/v2/object"
+import (
+	"github.com/SevereCloud/vksdk/v2/object"
+	"github.com/sirupsen/logrus"
+)
+
+var packageLogFields = logrus.Fields{
+	"package": "content",
+}
 
 type AttachmentsType string
 
 const (
-	Audio AttachmentsType = "audio"
-	Photo AttachmentsType = "photo"
+	AudioType AttachmentsType = "audio"
+	PhotoType AttachmentsType = "photo"
 )
 
 type AttachmentsContentCollector interface {

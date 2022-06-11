@@ -1,7 +1,6 @@
 package model
 
 import (
-	"chattweiler/pkg/repository/model/types"
 	"database/sql"
 	"time"
 )
@@ -9,7 +8,7 @@ import (
 type Phrase interface {
 	GetID() int
 	GetWeight() int
-	GetPhraseType() types.PhraseType
+	GetPhraseType() PhraseType
 	UserTemplated() bool
 	HasAudioAccompaniment() bool
 	GetVkAudioId() string
@@ -19,13 +18,13 @@ type Phrase interface {
 }
 
 type PhrasePg struct {
-	PhraseID             int              `db:"phrase_id" csv:"phrase_id"`
-	Weight               int              `db:"weight" csv:"weight"`
-	PhraseType           types.PhraseType `db:"phrase_type" csv:"phrase_type"`
-	IsUserTemplated      bool             `db:"is_user_templated" csv:"is_user_templated"`
-	IsAudioAccompaniment bool             `db:"is_audio_accompaniment" csv:"is_audio_accompaniment"`
-	VkAudioId            sql.NullString   `db:"vk_audio_id" csv:"vk_audio_id"`
-	Text                 string           `db:"text" csv:"text"`
+	PhraseID             int            `db:"phrase_id" csv:"phrase_id"`
+	Weight               int            `db:"weight" csv:"weight"`
+	PhraseType           PhraseType     `db:"phrase_type" csv:"phrase_type"`
+	IsUserTemplated      bool           `db:"is_user_templated" csv:"is_user_templated"`
+	IsAudioAccompaniment bool           `db:"is_audio_accompaniment" csv:"is_audio_accompaniment"`
+	VkAudioId            sql.NullString `db:"vk_audio_id" csv:"vk_audio_id"`
+	Text                 string         `db:"text" csv:"text"`
 }
 
 func (p PhrasePg) GetID() int {
@@ -36,7 +35,7 @@ func (p PhrasePg) GetWeight() int {
 	return p.Weight
 }
 
-func (p PhrasePg) GetPhraseType() types.PhraseType {
+func (p PhrasePg) GetPhraseType() PhraseType {
 	return p.PhraseType
 }
 
@@ -61,13 +60,13 @@ func (p PhrasePg) NullableVkAudio() bool {
 }
 
 type PhraseCsv struct {
-	PhraseID             int              `csv:"phrase_id"`
-	Weight               int              `csv:"weight"`
-	PhraseType           types.PhraseType `csv:"phrase_type"`
-	IsUserTemplated      bool             `csv:"is_user_templated"`
-	IsAudioAccompaniment bool             `csv:"is_audio_accompaniment"`
-	VkAudioId            string           `csv:"vk_audio_id"`
-	Text                 string           `csv:"text"`
+	PhraseID             int        `csv:"phrase_id"`
+	Weight               int        `csv:"weight"`
+	PhraseType           PhraseType `csv:"phrase_type"`
+	IsUserTemplated      bool       `csv:"is_user_templated"`
+	IsAudioAccompaniment bool       `csv:"is_audio_accompaniment"`
+	VkAudioId            string     `csv:"vk_audio_id"`
+	Text                 string     `csv:"text"`
 }
 
 func (p PhraseCsv) GetID() int {
@@ -78,7 +77,7 @@ func (p PhraseCsv) GetWeight() int {
 	return p.Weight
 }
 
-func (p PhraseCsv) GetPhraseType() types.PhraseType {
+func (p PhraseCsv) GetPhraseType() PhraseType {
 	return p.PhraseType
 }
 
@@ -112,7 +111,7 @@ type MembershipWarning struct {
 }
 
 type ContentSource struct {
-	SourceID      int                     `db:"source_id" csv:"source_id"`
-	VkCommunityID string                  `db:"vk_community_id" csv:"vk_community_id"`
-	SourceType    types.ContentSourceType `db:"source_type" csv:"source_type"`
+	SourceID      int               `db:"source_id" csv:"source_id"`
+	VkCommunityID string            `db:"vk_community_id" csv:"vk_community_id"`
+	SourceType    ContentSourceType `db:"source_type" csv:"source_type"`
 }

@@ -2,12 +2,17 @@ package repository
 
 import (
 	"chattweiler/pkg/repository/model"
-	"chattweiler/pkg/repository/model/types"
+
+	"github.com/sirupsen/logrus"
 )
+
+var packageLogFields = logrus.Fields{
+	"package": "repository",
+}
 
 type PhraseRepository interface {
 	FindAll() []model.Phrase
-	FindAllByType(phraseType types.PhraseType) []model.Phrase
+	FindAllByType(phraseType model.PhraseType) []model.Phrase
 }
 
 type MembershipWarningRepository interface {
@@ -18,5 +23,5 @@ type MembershipWarningRepository interface {
 
 type ContentSourceRepository interface {
 	FindAll() []model.ContentSource
-	FindAllByType(sourceType types.ContentSourceType) []model.ContentSource
+	FindAllByType(sourceType model.ContentSourceType) []model.ContentSource
 }

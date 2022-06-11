@@ -1,25 +1,21 @@
-package s3
+package repository
 
 import (
 	"bytes"
 	"chattweiler/pkg/repository/model"
-	"chattweiler/pkg/repository/model/types"
 	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/jszwec/csvutil"
-	"github.com/sirupsen/logrus"
 	"io"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
-)
 
-var packageLogFields = logrus.Fields{
-	"package": "s3",
-}
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/jszwec/csvutil"
+	"github.com/sirupsen/logrus"
+)
 
 func getDateAsString(date time.Time) string {
 	year, month, day := date.Date()
@@ -144,7 +140,7 @@ func (repo *CsvObjectStorageCachedPhraseRepository) FindAll() []model.Phrase {
 	return repo.castPhrases(updatedPhrases)
 }
 
-func (repo *CsvObjectStorageCachedPhraseRepository) FindAllByType(phraseType types.PhraseType) []model.Phrase {
+func (repo *CsvObjectStorageCachedPhraseRepository) FindAllByType(phraseType model.PhraseType) []model.Phrase {
 	var phrases []model.Phrase
 	for _, phrase := range repo.FindAll() {
 		if phraseType == phrase.GetPhraseType() {
@@ -249,7 +245,7 @@ func (repo *CsvObjectStorageCachedContentSourceRepository) FindAll() []model.Con
 	return updatedContentSources
 }
 
-func (repo *CsvObjectStorageCachedContentSourceRepository) FindAllByType(sourceType types.ContentSourceType) []model.ContentSource {
+func (repo *CsvObjectStorageCachedContentSourceRepository) FindAllByType(sourceType model.ContentSourceType) []model.ContentSource {
 	var contentSources []model.ContentSource
 	for _, contentSource := range repo.FindAll() {
 		if sourceType == contentSource.SourceType {

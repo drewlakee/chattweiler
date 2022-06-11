@@ -1,11 +1,8 @@
-package factory
+package repository
 
 import (
-	"chattweiler/pkg/app/configs/static"
-	"chattweiler/pkg/app/utils"
-	"chattweiler/pkg/repository"
-	"chattweiler/pkg/repository/pg"
-	objectstorage "chattweiler/pkg/repository/yandex/s3"
+	"chattweiler/pkg/configs"
+	"chattweiler/pkg/utils"
 	"context"
 	"time"
 
@@ -15,10 +12,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
 )
-
-var packageLogFields = logrus.Fields{
-	"package": "factory",
-}
 
 type RepositoryType string
 
@@ -31,7 +24,7 @@ var pgConnectionSingleton *sqlx.DB
 var objectStorageClientSingleton *s3.Client
 
 func getPostgresqlConnection() *sqlx.DB {
-	pgDataSourceString := utils.MustGetEnv(static.PgDatasourceString)
+	pgDataSourceString := utils.MustGetEnv(configs.PgDatasourceString)
 
 	if pgConnectionSingleton != nil {
 		return pgConnectionSingleton
@@ -63,15 +56,15 @@ func getObjectStorageClient() *s3.Client {
 
 	credentialsProvider := aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
 		return aws.Credentials{
-			AccessKeyID:     utils.MustGetEnv(static.YandexObjectStorageAccessKeyID),
-			SecretAccessKey: utils.MustGetEnv(static.YandexObjectStorageSecretAccessKey),
+			AccessKeyID:     utils.MustGetEnv(configs.YandexObjectStorageAccessKeyID),
+			SecretAccessKey: utils.MustGetEnv(configs.YandexObjectStorageSecretAccessKey),
 		}, nil
 	})
 
 	cfg, err := config.LoadDefaultConfig(
 		context.TODO(),
 		config.WithEndpointResolverWithOptions(customResolver),
-		config.WithRegion(utils.MustGetEnv(static.YandexObjectStorageRegion)),
+		config.WithRegion(utils.MustGetEnv(configs.YandexObjectStorageRegion)),
 		config.WithCredentialsProvider(credentialsProvider),
 	)
 
@@ -86,8 +79,8 @@ func getObjectStorageClient() *s3.Client {
 	return objectStorageClientSingleton
 }
 
-func CreatePhraseRepository(repoType RepositoryType) repository.PhraseRepository {
-	var repo repository.PhraseRepository
+func CreatePhraseRepository(repoType RepositoryType) PhraseRepository {
+	var repo PhraseRepository
 	switch repoType {
 	case CsvYandexObjectStorage:
 		repo = createCsvObjectStorageCachedPhraseRepository()
@@ -100,39 +93,39 @@ func CreatePhraseRepository(repoType RepositoryType) repository.PhraseRepository
 	return repo
 }
 
-func createCsvObjectStorageCachedPhraseRepository() *objectstorage.CsvObjectStorageCachedPhraseRepository {
-	cacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.PhrasesCacheRefreshInterval))
+func createCsvObjectStorageCachedPhraseRepository() *CsvObjectStorageCachedPhraseRepository {
+	cacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(configs.PhrasesCacheRefreshInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createCsvObjectStorageCachedPhraseRepository",
 			"err":  err,
-			"key":  static.PhrasesCacheRefreshInterval.Key,
+			"key":  configs.PhrasesCacheRefreshInterval.Key,
 		}).Fatal("parsing of env variable is failed")
 	}
 
-	return objectstorage.NewCsvObjectStorageCachedPhraseRepository(
+	return NewCsvObjectStorageCachedPhraseRepository(
 		getObjectStorageClient(),
-		utils.MustGetEnv(static.YandexObjectStoragePhrasesBucket),
-		utils.MustGetEnv(static.YandexObjectStoragePhrasesBucketKey),
+		utils.MustGetEnv(configs.YandexObjectStoragePhrasesBucket),
+		utils.MustGetEnv(configs.YandexObjectStoragePhrasesBucketKey),
 		cacheRefreshInterval,
 	)
 }
 
-func createPostgresqlCachedPhraseRepository() repository.PhraseRepository {
-	pgPhrasesCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.PhrasesCacheRefreshInterval))
+func createPostgresqlCachedPhraseRepository() PhraseRepository {
+	pgPhrasesCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(configs.PhrasesCacheRefreshInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createPostgresqlCachedPhraseRepository",
 			"err":  err,
-			"key":  static.PhrasesCacheRefreshInterval.Key,
+			"key":  configs.PhrasesCacheRefreshInterval.Key,
 		}).Fatal("parsing of env variable is failed")
 	}
 
-	return pg.NewCachedPgPhraseRepository(getPostgresqlConnection(), pgPhrasesCacheRefreshInterval)
+	return NewCachedPgPhraseRepository(getPostgresqlConnection(), pgPhrasesCacheRefreshInterval)
 }
 
-func CreateContentSourceRepository(repoType RepositoryType) repository.ContentSourceRepository {
-	var repo repository.ContentSourceRepository
+func CreateContentSourceRepository(repoType RepositoryType) ContentSourceRepository {
+	var repo ContentSourceRepository
 	switch repoType {
 	case CsvYandexObjectStorage:
 		repo = createCsvObjectStorageCachedContentSourceRepository()
@@ -145,54 +138,54 @@ func CreateContentSourceRepository(repoType RepositoryType) repository.ContentSo
 	return repo
 }
 
-func createCsvObjectStorageCachedContentSourceRepository() *objectstorage.CsvObjectStorageCachedContentSourceRepository {
-	cacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.ContentSourceCacheRefreshInterval))
+func createCsvObjectStorageCachedContentSourceRepository() *CsvObjectStorageCachedContentSourceRepository {
+	cacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(configs.ContentSourceCacheRefreshInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createCsvObjectStorageCachedContentSourceRepository",
 			"err":  err,
-			"key":  static.ContentSourceCacheRefreshInterval.Key,
+			"key":  configs.ContentSourceCacheRefreshInterval.Key,
 		}).Fatal("parsing of env variable is failed")
 	}
 
-	return objectstorage.NewCsvObjectStorageCachedContentSourceRepository(
+	return NewCsvObjectStorageCachedContentSourceRepository(
 		getObjectStorageClient(),
-		utils.MustGetEnv(static.YandexObjectStorageContentSourceBucket),
-		utils.MustGetEnv(static.YandexObjectStorageContentSourceBucketKey),
+		utils.MustGetEnv(configs.YandexObjectStorageContentSourceBucket),
+		utils.MustGetEnv(configs.YandexObjectStorageContentSourceBucketKey),
 		cacheRefreshInterval,
 	)
 }
 
-func createPostgresqlCachedContentSourceRepository() repository.ContentSourceRepository {
-	pgContentSourceCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(static.ContentSourceCacheRefreshInterval))
+func createPostgresqlCachedContentSourceRepository() ContentSourceRepository {
+	pgContentSourceCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(configs.ContentSourceCacheRefreshInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createPostgresqlCachedContentSourceRepository",
 			"err":  err,
-			"key":  static.ContentSourceCacheRefreshInterval.Key,
+			"key":  configs.ContentSourceCacheRefreshInterval.Key,
 		}).Fatal("parsing of env variable is failed")
 	}
 
-	return pg.NewCachedPgContentSourceRepository(getPostgresqlConnection(), pgContentSourceCacheRefreshInterval)
+	return NewCachedPgContentSourceRepository(getPostgresqlConnection(), pgContentSourceCacheRefreshInterval)
 }
 
-func CreateMembershipWarningRepository(repoType RepositoryType) repository.MembershipWarningRepository {
-	var repo repository.MembershipWarningRepository
+func CreateMembershipWarningRepository(repoType RepositoryType) MembershipWarningRepository {
+	var repo MembershipWarningRepository
 	switch repoType {
 	case CsvYandexObjectStorage:
 		repo = createCsvObjectStorageMembershipWarningRepository()
 	case Postgresql:
 		fallthrough
 	default:
-		repo = pg.NewPgMembershipWarningRepository(getPostgresqlConnection())
+		repo = NewPgMembershipWarningRepository(getPostgresqlConnection())
 	}
 
 	return repo
 }
 
-func createCsvObjectStorageMembershipWarningRepository() *objectstorage.CsvObjectStorageMembershipWarningRepository {
-	return objectstorage.NewCsvObjectStorageMembershipWarningRepository(
+func createCsvObjectStorageMembershipWarningRepository() *CsvObjectStorageMembershipWarningRepository {
+	return NewCsvObjectStorageMembershipWarningRepository(
 		getObjectStorageClient(),
-		utils.MustGetEnv(static.YandexObjectStorageMembershipWarningBucket),
+		utils.MustGetEnv(configs.YandexObjectStorageMembershipWarningBucket),
 	)
 }
