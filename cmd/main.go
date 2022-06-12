@@ -20,9 +20,9 @@ func main() {
 		createRepositoryType = repository.CsvYandexObjectStorage
 	}
 
-	bot.NewBot(
+	bot.NewLongPoolingBot(
 		repository.CreatePhraseRepository(createRepositoryType),
 		repository.CreateMembershipWarningRepository(createRepositoryType),
 		repository.CreateContentSourceRepository(createRepositoryType),
-	).Start()
+	).Serve()
 }

@@ -1,27 +1,32 @@
-package content
+package service
 
 import (
+	botobject "chattweiler/pkg/bot/object"
 	"chattweiler/pkg/repository"
 	"chattweiler/pkg/repository/model"
 	"chattweiler/pkg/vk"
+	"chattweiler/pkg/vk/content"
 
 	"github.com/SevereCloud/vksdk/v2/api"
-	lpwrapper "github.com/SevereCloud/vksdk/v2/longpoll-user/v3"
 	"github.com/SevereCloud/vksdk/v2/object"
 	"github.com/sirupsen/logrus"
 )
 
+var packageLogFields = logrus.Fields{
+	"package": "service",
+}
+
 type MediaContentCourier struct {
 	communityVkApi              *api.VK
 	userVkApi                   *api.VK
-	attachmentsContentCollector AttachmentsContentCollector
+	attachmentsContentCollector content.AttachmentsContentCollector
 	phrasesRepo                 repository.PhraseRepository
 }
 
 func NewMediaContentCourier(
 	communityVkApi,
 	userVkApi *api.VK,
-	attachmentsContentCollector AttachmentsContentCollector,
+	attachmentsContentCollector content.AttachmentsContentCollector,
 	phrasesRepo repository.PhraseRepository,
 ) *MediaContentCourier {
 	return &MediaContentCourier{
@@ -32,17 +37,17 @@ func NewMediaContentCourier(
 	}
 }
 
-func (courier *MediaContentCourier) ReceiveAndDeliver(deliverPhraseType model.PhraseType, deliverContentType AttachmentsType, contentRequestChannel <-chan lpwrapper.NewMessage) {
+func (courier *MediaContentCourier) ReceiveAndDeliver(deliverPhraseType model.PhraseType, contentRequestChannel <-chan *botobject.ContentRequestCommand) {
 	for {
 		select {
 		case requestMessage := <-contentRequestChannel:
-			user, err := vk.GetUserInfo(courier.communityVkApi, requestMessage.AdditionalData.From)
+			user, err := vk.GetUserInfo(courier.communityVkApi, requestMessage.UserID)
 			if err != nil {
 				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 					"struct": "MediaContentCourier",
 					"func":   "ReceiveAndDeliver",
 					"err":    err,
-					"user":   requestMessage.AdditionalData.From,
+					"user":   requestMessage.UserID,
 				}).Error("get user info error")
 				continue
 			}
@@ -64,7 +69,7 @@ func (courier *MediaContentCourier) ReceiveAndDeliver(deliverPhraseType model.Ph
 				continue
 			}
 
-			apiParams["attachment"] = courier.resolveContentID(mediaContent, deliverContentType)
+			apiParams["attachment"] = courier.resolveContentID(mediaContent, requestMessage.Type)
 			_, err = courier.communityVkApi.MessagesSend(apiParams)
 			if err != nil {
 				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
@@ -77,11 +82,11 @@ func (courier *MediaContentCourier) ReceiveAndDeliver(deliverPhraseType model.Ph
 	}
 }
 
-func (courier *MediaContentCourier) resolveContentID(mediaContent object.WallWallpostAttachment, deliverContentType AttachmentsType) string {
+func (courier *MediaContentCourier) resolveContentID(mediaContent object.WallWallpostAttachment, deliverContentType vk.AttachmentsType) string {
 	switch deliverContentType {
-	case AudioType:
+	case vk.AudioType:
 		return mediaContent.Audio.ToAttachment()
-	case PhotoType:
+	case vk.PhotoType:
 		return mediaContent.Photo.ToAttachment()
 	}
 

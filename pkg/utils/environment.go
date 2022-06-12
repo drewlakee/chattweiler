@@ -1,3 +1,5 @@
+// Package provides useful functions for
+// the application needs
 package utils
 
 import (

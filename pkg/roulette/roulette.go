@@ -1,3 +1,6 @@
+// Package provides helpful functions to
+// items picking by their probability
+// https://en.wikipedia.org/wiki/Fitness_proportionate_selection
 package roulette
 
 import (

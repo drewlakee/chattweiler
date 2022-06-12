@@ -1,3 +1,5 @@
+// Package provides interfaces for repositories and
+// their implementations
 package repository
 
 import (

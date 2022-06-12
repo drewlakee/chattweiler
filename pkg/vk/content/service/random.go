@@ -1,9 +1,12 @@
-package content
+// Package provides application services
+// for content fetching within VK API
+package service
 
 import (
 	"chattweiler/pkg/repository"
 	"chattweiler/pkg/repository/model"
 	"chattweiler/pkg/utils"
+	"chattweiler/pkg/vk"
 	"math/rand"
 	"time"
 
@@ -14,7 +17,7 @@ import (
 
 type CachedRandomAttachmentsContentCollector struct {
 	client                *api.VK
-	attachmentsType       AttachmentsType
+	attachmentsType       vk.AttachmentsType
 	contentSourceRepo     repository.ContentSourceRepository
 	maxCachedAttachments  int
 	cachedAttachments     []object.WallWallpostAttachment
@@ -24,7 +27,7 @@ type CachedRandomAttachmentsContentCollector struct {
 
 func NewCachedRandomAttachmentsContentCollector(
 	client *api.VK,
-	attachmentsType AttachmentsType,
+	attachmentsType vk.AttachmentsType,
 	contentSourceRepo repository.ContentSourceRepository,
 	maxCachedAttachments int,
 	cacheRefreshThreshold float32,
@@ -100,9 +103,7 @@ func (collector *CachedRandomAttachmentsContentCollector) refreshCacheDifference
 		difference--
 	}
 
-	for _, attachment := range collectResult {
-		collector.cachedAttachments = append(collector.cachedAttachments, attachment)
-	}
+	collector.cachedAttachments = append(collector.cachedAttachments, collectResult...)
 }
 
 func (collector *CachedRandomAttachmentsContentCollector) getRandomWallPostsOffset(wallPostsCount, maxContentFetchBound int) int {
@@ -151,9 +152,9 @@ func (collector *CachedRandomAttachmentsContentCollector) getRandomSource() mode
 
 	var contentSources []model.ContentSource
 	switch collector.attachmentsType {
-	case AudioType:
+	case vk.AudioType:
 		contentSources = collector.contentSourceRepo.FindAllByType(model.AudioType)
-	case PhotoType:
+	case vk.PhotoType:
 		contentSources = collector.contentSourceRepo.FindAllByType(model.PictureType)
 	default:
 		contentSources = []model.ContentSource{}

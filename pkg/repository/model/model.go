@@ -1,3 +1,4 @@
+// Package provides object-models for repositories
 package model
 
 import (

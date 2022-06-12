@@ -1,3 +1,5 @@
+// Package provides operational structures and
+// helpful functions to communicate with VK API
 package vk
 
 import (
@@ -12,6 +14,13 @@ import (
 var packageLogFields = logrus.Fields{
 	"package": "vk",
 }
+
+type AttachmentsType string
+
+const (
+	AudioType AttachmentsType = "audio"
+	PhotoType AttachmentsType = "photo"
+)
 
 func GetUserInfo(vkapi *api.VK, userID string) (*object.UsersUser, error) {
 	users, err := vkapi.UsersGet(api.Params{
