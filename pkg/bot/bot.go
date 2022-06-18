@@ -20,7 +20,5 @@ type Bot interface {
 	handleAudioRequestCommand(*object.ContentRequestCommand)
 	handlePictureRequestCommand(*object.ContentRequestCommand)
 
-	checkMembership()
-
 	Serve()
 }
