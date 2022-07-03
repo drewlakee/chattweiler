@@ -50,7 +50,8 @@ func (checker *Checker) checkAlreadyRelevantMembershipWarnings(members map[int]o
 
 	var expiredWarnings []model.MembershipWarning
 	for _, warning := range relevantWarnings {
-		if time.Now().After(warning.FirstWarningTs.Add(warning.GracePeriod)) {
+		gracePeriod, _ := time.ParseDuration(warning.GracePeriod)
+		if time.Now().After(warning.FirstWarningTs.Add(gracePeriod)) {
 			expiredWarnings = append(expiredWarnings, warning)
 		}
 		alreadyForewarnedUsers[warning.UserID] = true
@@ -120,21 +121,25 @@ func (checker *Checker) checkChatForNewWarning(members map[int]object.UsersUser,
 
 			newWarning := model.MembershipWarning{}
 			newWarning.IsRelevant = true
-			newWarning.GracePeriod = checker.gracePeriod
+			newWarning.GracePeriod = checker.gracePeriod.String()
 			newWarning.FirstWarningTs = time.Now()
 			newWarning.Username = userProfile.ScreenName
 			newWarning.UserID = userProfile.ID
 			checker.membershipWarningsRepo.Insert(newWarning)
 
 			peerId := 2000000000 + int(checker.conversationId)
-			_, err := checker.vkapi.MessagesSend(BuildMessageUsingPersonalizedPhrase(
+			messageToSend := BuildMessageUsingPersonalizedPhrase(
 				peerId,
 				&userProfile,
 				model.MembershipWarninType,
 				checker.phrasesRepo.FindAllByType(model.MembershipWarninType),
-			))
-			if err != nil {
-				return err
+			)
+
+			if _, messageContainsPhrase := messageToSend["message"]; !messageContainsPhrase {
+				_, err := checker.vkapi.MessagesSend(messageToSend)
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil

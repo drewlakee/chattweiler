@@ -37,23 +37,28 @@ func NewMediaContentCourier(
 	}
 }
 
-func (courier *MediaContentCourier) ReceiveAndDeliver(deliverPhraseType model.PhraseType, contentRequestChannel <-chan *botobject.ContentRequestCommand) {
+func (courier *MediaContentCourier) ReceiveAndDeliver(
+	deliverPhraseType model.PhraseType,
+	contentRequestChannel <-chan *botobject.ContentRequestCommand,
+) {
 	for {
 		select {
+		case <-contentRequestChannel:
+			return
 		case requestMessage := <-contentRequestChannel:
-			user, err := vk.GetUserInfo(courier.communityVkApi, requestMessage.UserID)
+			user, err := vk.GetUserInfo(courier.communityVkApi, requestMessage.RequestEvent.UserID)
 			if err != nil {
 				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 					"struct": "MediaContentCourier",
 					"func":   "ReceiveAndDeliver",
 					"err":    err,
-					"user":   requestMessage.UserID,
+					"user":   requestMessage.RequestEvent.UserID,
 				}).Error("get user info error")
 				continue
 			}
 
-			apiParams := vk.BuildMessageUsingPersonalizedPhrase(
-				requestMessage.PeerID,
+			messageToSend := vk.BuildMessageUsingPersonalizedPhrase(
+				requestMessage.RequestEvent.PeerID,
 				user,
 				deliverPhraseType,
 				courier.phrasesRepo.FindAllByType(deliverPhraseType),
@@ -69,9 +74,9 @@ func (courier *MediaContentCourier) ReceiveAndDeliver(deliverPhraseType model.Ph
 				continue
 			}
 
-			apiParams["attachment"] = courier.resolveContentID(mediaContent, requestMessage.Type)
-			_, err = courier.communityVkApi.MessagesSend(apiParams)
-			if err != nil {
+			messageToSend["attachment"] = courier.resolveContentID(mediaContent, requestMessage.Type)
+			_, err = courier.communityVkApi.MessagesSend(messageToSend)
+			if _, messageContainsPhrase := messageToSend["message"]; !messageContainsPhrase {
 				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 					"func":   "ReceiveAndDeliver",
 					"struct": "MediaContentCourier",
@@ -82,7 +87,10 @@ func (courier *MediaContentCourier) ReceiveAndDeliver(deliverPhraseType model.Ph
 	}
 }
 
-func (courier *MediaContentCourier) resolveContentID(mediaContent object.WallWallpostAttachment, deliverContentType vk.AttachmentsType) string {
+func (courier *MediaContentCourier) resolveContentID(
+	mediaContent object.WallWallpostAttachment,
+	deliverContentType vk.AttachmentsType,
+) string {
 	switch deliverContentType {
 	case vk.AudioType:
 		return mediaContent.Audio.ToAttachment()

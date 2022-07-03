@@ -6,22 +6,12 @@ import (
 	"chattweiler/pkg/vk"
 )
 
-type ChatUserJoinEvent struct {
+type ChatEvent struct {
 	UserID string
-	PeerID int
-}
-
-type ChatUserLeavingEvent struct {
-	UserID string
-	PeerID int
-}
-
-type InfoCommand struct {
 	PeerID int
 }
 
 type ContentRequestCommand struct {
-	Type   vk.AttachmentsType
-	UserID string
-	PeerID int
+	Type         vk.AttachmentsType
+	RequestEvent *ChatEvent
 }

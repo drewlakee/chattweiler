@@ -180,11 +180,11 @@ func (bot *LongPoolingBot) Serve() {
 		switch vk.ResolveChatInfoChangeEventType(event) {
 		case vklpwrapper.ChatUserCome:
 			if welcomeNewMembers {
-				bot.handleChatUserJoinEvent(mapper.NewChatUserJoinEventFromChatInfoChange(event))
+				bot.handleChatUserJoinEvent(mapper.NewChatEventFromFromChatInfoChange(event))
 			}
 		case vklpwrapper.ChatUserLeave:
 			if goodbyeMembers {
-				bot.handleChatUserLeavingEvent(mapper.NewChatUserLeavingEventFromChatInfoChange(event))
+				bot.handleChatUserLeavingEvent(mapper.NewChatEventFromFromChatInfoChange(event))
 			}
 		}
 	})
@@ -243,7 +243,7 @@ func (bot *LongPoolingBot) Serve() {
 	bot.vklpwrapper.OnNewMessage(func(event wrapper.NewMessage) {
 		switch event.Text {
 		case infoCommand:
-			bot.handleInfoCommand(mapper.NewInfoCommandFromNewMessage(event))
+			bot.handleInfoCommand(mapper.NewChatEventFromNewMessage(event))
 		case audioRequestCommand:
 			if audioRequests {
 				bot.handleAudioRequestCommand(mapper.NewContentRequestCommandFromNewMessage(vk.AudioType, event))
@@ -255,21 +255,21 @@ func (bot *LongPoolingBot) Serve() {
 		}
 	})
 
-	bot.checkMembership()
+	bot.startMembershipCheckingAsync()
 
 	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"func": "Start",
+		"func": "Serve",
 	}).Info("Bot is running...")
 	err = bot.vklp.Run()
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "Start",
+			"func": "Serve",
 			"err":  err,
 		}).Fatal("bot is crashed")
 	}
 }
 
-func (bot *LongPoolingBot) handleChatUserJoinEvent(event *object.ChatUserJoinEvent) {
+func (bot *LongPoolingBot) handleChatUserJoinEvent(event *object.ChatEvent) {
 	user, err := vk.GetUserInfo(bot.vkapi, event.UserID)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
@@ -286,14 +286,14 @@ func (bot *LongPoolingBot) handleChatUserJoinEvent(event *object.ChatUserJoinEve
 		"username": user.ScreenName,
 	}).Info()
 
-	params := vk.BuildMessageUsingPersonalizedPhrase(
+	messageToSend := vk.BuildMessageUsingPersonalizedPhrase(
 		event.PeerID,
 		user,
 		model.WelcomeType,
 		bot.phrasesRepo.FindAllByType(model.WelcomeType),
 	)
 
-	if _, messageContainsPhrase := params["message"]; !messageContainsPhrase {
+	if _, messageContainsPhrase := messageToSend["message"]; !messageContainsPhrase {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct": "Bot",
 			"func":   "handleChatUserJoinEvent",
@@ -301,7 +301,7 @@ func (bot *LongPoolingBot) handleChatUserJoinEvent(event *object.ChatUserJoinEve
 		return
 	}
 
-	_, err = bot.vkapi.MessagesSend(params)
+	_, err = bot.vkapi.MessagesSend(messageToSend)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct": "Bot",
@@ -311,7 +311,7 @@ func (bot *LongPoolingBot) handleChatUserJoinEvent(event *object.ChatUserJoinEve
 	}
 }
 
-func (bot *LongPoolingBot) handleChatUserLeavingEvent(event *object.ChatUserLeavingEvent) {
+func (bot *LongPoolingBot) handleChatUserLeavingEvent(event *object.ChatEvent) {
 	user, err := vk.GetUserInfo(bot.vkapi, event.UserID)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
@@ -328,14 +328,14 @@ func (bot *LongPoolingBot) handleChatUserLeavingEvent(event *object.ChatUserLeav
 		"username": user.ScreenName,
 	}).Info()
 
-	params := vk.BuildMessageUsingPersonalizedPhrase(
+	messageToSend := vk.BuildMessageUsingPersonalizedPhrase(
 		event.PeerID,
 		user,
 		model.GoodbyeType,
 		bot.phrasesRepo.FindAllByType(model.GoodbyeType),
 	)
 
-	if _, messageContainsPhrase := params["message"]; !messageContainsPhrase {
+	if _, messageContainsPhrase := messageToSend["message"]; !messageContainsPhrase {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct": "Bot",
 			"func":   "handleChatUserLeavingEvent",
@@ -343,7 +343,7 @@ func (bot *LongPoolingBot) handleChatUserLeavingEvent(event *object.ChatUserLeav
 		return
 	}
 
-	_, err = bot.vkapi.MessagesSend(params)
+	_, err = bot.vkapi.MessagesSend(messageToSend)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct": "Bot",
@@ -353,7 +353,7 @@ func (bot *LongPoolingBot) handleChatUserLeavingEvent(event *object.ChatUserLeav
 	}
 }
 
-func (bot *LongPoolingBot) handleInfoCommand(event *object.InfoCommand) {
+func (bot *LongPoolingBot) handleInfoCommand(event *object.ChatEvent) {
 	_, err := bot.vkapi.MessagesSend(vk.BuildMessagePhrase(
 		event.PeerID,
 		bot.phrasesRepo.FindAllByType(model.InfoType),
@@ -374,7 +374,7 @@ func (bot *LongPoolingBot) handlePictureRequestCommand(request *object.ContentRe
 	bot.pictureContentCourierChannel <- request
 }
 
-func (bot *LongPoolingBot) checkMembership() {
+func (bot *LongPoolingBot) startMembershipCheckingAsync() {
 	checkMembership, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.BotFunctionalityMembershipChecking))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
@@ -385,7 +385,6 @@ func (bot *LongPoolingBot) checkMembership() {
 	}
 
 	if checkMembership {
-		// run async
 		go bot.membershipChecker.LoopCheck()
 	}
 }

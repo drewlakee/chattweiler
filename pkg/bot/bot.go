@@ -13,12 +13,12 @@ var packageLogFields = logrus.Fields{
 }
 
 type Bot interface {
-	handleChatUserJoinEvent(*object.ChatUserJoinEvent)
-	handleChatUserLeavingEvent(*object.ChatUserLeavingEvent)
+	Serve()
 
-	handleInfoCommand(*object.InfoCommand)
+	handleChatUserJoinEvent(*object.ChatEvent)
+	handleChatUserLeavingEvent(*object.ChatEvent)
+
+	handleInfoCommand(*object.ChatEvent)
 	handleAudioRequestCommand(*object.ContentRequestCommand)
 	handlePictureRequestCommand(*object.ContentRequestCommand)
-
-	Serve()
 }

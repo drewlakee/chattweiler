@@ -103,12 +103,12 @@ func (p PhraseCsv) NullableVkAudio() bool {
 }
 
 type MembershipWarning struct {
-	WarningID      int           `db:"warning_id" csv:"warning_id"`
-	UserID         int           `db:"user_id" csv:"user_id"`
-	Username       string        `db:"username" csv:"username"`
-	FirstWarningTs time.Time     `db:"first_warning_ts" csv:"first_warning_ts"`
-	GracePeriod    time.Duration `db:"grace_period_ns" csv:"grace_period_ns"`
-	IsRelevant     bool          `db:"is_relevant" csv:"is_relevant"`
+	WarningID      int       `db:"warning_id" csv:"warning_id"`
+	UserID         int       `db:"user_id" csv:"user_id"`
+	Username       string    `db:"username" csv:"username"`
+	FirstWarningTs time.Time `db:"first_warning_ts" csv:"first_warning_ts"`
+	GracePeriod    string    `db:"grace_period" csv:"grace_period"`
+	IsRelevant     bool      `db:"is_relevant" csv:"is_relevant"`
 }
 
 type ContentSource struct {

@@ -6,6 +6,7 @@ import (
 	"chattweiler/pkg/roulette"
 	"chattweiler/pkg/utils"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 
@@ -15,7 +16,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phrasesType model.PhraseType, phrases []model.Phrase) api.Params {
+func BuildMessageUsingPersonalizedPhrase(
+	peerId int,
+	user *object.UsersUser,
+	phrasesType model.PhraseType,
+	phrases []model.Phrase,
+) api.Params {
 	phrase := roulette.Spin(phrases...)
 	if phrase == nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
@@ -26,9 +32,10 @@ func BuildMessageUsingPersonalizedPhrase(peerId int, user *object.UsersUser, phr
 
 	builder := params.NewMessagesSendBuilder()
 	builder.PeerID(peerId)
-	builder.RandomID(0)
+	builder.RandomID(rand.Int())
 
 	if phrase == nil {
+		builder.Message("")
 		return builder.Params
 	}
 

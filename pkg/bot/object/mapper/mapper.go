@@ -3,6 +3,7 @@
 package mapper
 
 import (
+	"github.com/SevereCloud/vksdk/v2/events"
 	wrapper "github.com/SevereCloud/vksdk/v2/longpoll-user/v3"
 
 	"chattweiler/pkg/bot/object"
@@ -10,30 +11,32 @@ import (
 	"strconv"
 )
 
-func NewChatUserJoinEventFromChatInfoChange(event wrapper.ChatInfoChange) *object.ChatUserJoinEvent {
-	return &object.ChatUserJoinEvent{
+func NewChatEventFromFromChatInfoChange(event wrapper.ChatInfoChange) *object.ChatEvent {
+	return &object.ChatEvent{
 		UserID: strconv.Itoa(event.Info),
 		PeerID: event.PeerID,
 	}
 }
 
-func NewChatUserLeavingEventFromChatInfoChange(event wrapper.ChatInfoChange) *object.ChatUserLeavingEvent {
-	return &object.ChatUserLeavingEvent{
-		UserID: strconv.Itoa(event.Info),
-		PeerID: event.PeerID,
+func NewChatEventFromMessageNewObject(event events.MessageNewObject) *object.ChatEvent {
+	return &object.ChatEvent{
+		UserID: strconv.Itoa(event.Message.Action.MemberID),
+		PeerID: event.Message.PeerID,
 	}
 }
 
-func NewInfoCommandFromNewMessage(message wrapper.NewMessage) *object.InfoCommand {
-	return &object.InfoCommand{
+func NewChatEventFromNewMessage(message wrapper.NewMessage) *object.ChatEvent {
+	return &object.ChatEvent{
 		PeerID: message.PeerID,
 	}
 }
 
 func NewContentRequestCommandFromNewMessage(contentType vk.AttachmentsType, message wrapper.NewMessage) *object.ContentRequestCommand {
 	return &object.ContentRequestCommand{
-		Type:   contentType,
-		UserID: message.AdditionalData.From,
-		PeerID: message.PeerID,
+		Type: contentType,
+		RequestEvent: &object.ChatEvent{
+			UserID: message.AdditionalData.From,
+			PeerID: message.PeerID,
+		},
 	}
 }

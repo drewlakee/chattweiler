@@ -33,7 +33,7 @@ func GetUserInfo(vkapi *api.VK, userID string) (*object.UsersUser, error) {
 	}
 
 	if len(users) == 0 {
-		return nil, errors.New(fmt.Sprintf("User with id %d not found", userID))
+		return nil, errors.New(fmt.Sprintf("User with id `%s` not found", userID))
 	}
 
 	return &users[0], err

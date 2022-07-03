@@ -107,7 +107,7 @@ func NewPgMembershipWarningRepository(db *sqlx.DB) *PgMembershipWarningRepositor
 
 func (pgMembershipWarningRepository *PgMembershipWarningRepository) Insert(warning model.MembershipWarning) bool {
 	insert :=
-		"INSERT INTO membership_warning (user_id, username, first_warning_ts, grace_period_ns, is_relevant) " +
+		"INSERT INTO membership_warning (user_id, username, first_warning_ts, grace_period, is_relevant) " +
 			"VALUES ($1, $2, $3, $4, $5)"
 
 	_, err := pgMembershipWarningRepository.db.Exec(
@@ -182,7 +182,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToU
 
 func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAllRelevant() []model.MembershipWarning {
 	query :=
-		"SELECT warning_id, user_id, username, first_warning_ts, grace_period_ns, is_relevant " +
+		"SELECT warning_id, user_id, username, first_warning_ts, grace_period, is_relevant " +
 			"FROM membership_warning " +
 			"WHERE is_relevant = true"
 
