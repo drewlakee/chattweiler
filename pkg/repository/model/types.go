@@ -3,17 +3,16 @@ package model
 type PhraseType string
 
 const (
-	WelcomeType          PhraseType = "welcome"
-	GoodbyeType          PhraseType = "goodbye"
-	MembershipWarninType PhraseType = "membership_warning"
-	InfoType             PhraseType = "info"
-	AudioRequestType     PhraseType = "audio_request"
-	PictureRequestType   PhraseType = "picture_request"
+	WelcomeType           PhraseType = "welcome"
+	GoodbyeType           PhraseType = "goodbye"
+	MembershipWarningType PhraseType = "membership_warning"
+	InfoType              PhraseType = "info"
+	ContentRequestType    PhraseType = "content_request"
 )
 
-type ContentSourceType string
+type MediaContentType string
 
 const (
-	AudioType   ContentSourceType = "audio"
-	PictureType ContentSourceType = "picture"
+	AudioType   MediaContentType = "audio"
+	PictureType MediaContentType = "picture"
 )

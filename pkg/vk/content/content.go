@@ -1,5 +1,4 @@
-// Package provides interfaces for application
-// content services
+// Package content provides services for content fetching
 package content
 
 import (

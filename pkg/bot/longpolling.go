@@ -21,21 +21,23 @@ import (
 )
 
 type LongPoolingBot struct {
-	vkapi                        *api.VK
-	vklp                         *vklp.LongPoll
-	vklpwrapper                  *wrapper.Wrapper
-	phrasesRepo                  repository.PhraseRepository
-	membershipChecker            *vk.Checker
-	audioContentCourier          *service.MediaContentCourier
-	audioContentCourierChannel   chan *object.ContentRequestCommand
-	pictureContentCourier        *service.MediaContentCourier
-	pictureContentCourierChannel chan *object.ContentRequestCommand
+	vkapi       *api.VK
+	vklp        *vklp.LongPoll
+	vklpwrapper *wrapper.Wrapper
+
+	phrasesRepo        repository.PhraseRepository
+	contentCommandRepo repository.ContentCommandRepository
+
+	membershipChecker *vk.Checker
+
+	contentCommandInputChannel chan *object.ContentRequestCommand
+	contentCourier             *service.MediaContentCourier
 }
 
 func NewLongPoolingBot(
 	phrasesRepo repository.PhraseRepository,
 	membershipWarningsRepo repository.MembershipWarningRepository,
-	contentSourceRepo repository.ContentSourceRepository,
+	contentCommandRepo repository.ContentCommandRepository,
 ) *LongPoolingBot {
 	vkBotToken := utils.MustGetEnv(configs.VkCommunityBotToken)
 	communityVkApi := api.NewVK(vkBotToken)
@@ -44,7 +46,7 @@ func NewLongPoolingBot(
 	lp, err := vklp.NewLongPoll(communityVkApi, mode)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "NewBot",
+			"func": "NewLongPoolingBot",
 			"err":  err,
 		}).Fatal("long poll initialization error")
 	}
@@ -52,7 +54,7 @@ func NewLongPoolingBot(
 	chatId, err := strconv.ParseInt(utils.MustGetEnv(configs.VkCommunityChatID), 10, 64)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "NewBot",
+			"func": "NewLongPoolingBot",
 			"err":  err,
 			"key":  configs.VkCommunityChatID.Key,
 		}).Fatal("parsing of env variable is failed")
@@ -61,7 +63,7 @@ func NewLongPoolingBot(
 	communityId, err := strconv.ParseInt(utils.MustGetEnv(configs.VkCommunityID), 10, 64)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "NewBot",
+			"func": "NewLongPoolingBot",
 			"err":  err,
 			"key":  configs.VkCommunityID.Key,
 		}).Fatal("parsing of env variable is failed")
@@ -70,7 +72,7 @@ func NewLongPoolingBot(
 	membershipCheckInterval, err := time.ParseDuration(utils.GetEnvOrDefault(configs.ChatWarderMembershipCheckInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "NewBot",
+			"func": "NewLongPoolingBot",
 			"err":  err,
 			"key":  configs.ChatWarderMembershipCheckInterval.Key,
 		}).Fatal("parsing of env variable is failed")
@@ -79,81 +81,34 @@ func NewLongPoolingBot(
 	gracePeriod, err := time.ParseDuration(utils.GetEnvOrDefault(configs.ChatWardenMembershipGracePeriod))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "NewBot",
+			"func": "NewLongPoolingBot",
 			"err":  err,
 			"key":  configs.ChatWardenMembershipGracePeriod.Key,
 		}).Fatal("parsing of env variable is failed")
 	}
 
 	vkUserApi := api.NewVK(utils.GetEnvOrDefault(configs.VkAdminUserToken))
-	audioMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentAudioMaxCachedAttachments), 10, 32)
-	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "NewBot",
-			"err":  err,
-			"key":  configs.ContentAudioMaxCachedAttachments.Key,
-		}).Fatal("parsing of env variable is failed")
-	}
 
-	audioCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault(configs.ContentAudioCacheRefreshThreshold), 32)
-	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "NewBot",
-			"err":  err,
-			"key":  configs.ContentAudioCacheRefreshThreshold.Key,
-		}).Fatal("parsing of env variable is failed")
-	}
-
-	audioCollector := service.NewCachedRandomAttachmentsContentCollector(vkUserApi, vk.AudioType, contentSourceRepo, int(audioMaxCachedAttachments), float32(audioCacheRefreshThreshold))
-
-	audioQueueSize, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentAudioQueueSize), 10, 32)
-	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "NewBot",
-			"err":  err,
-			"key":  configs.ContentAudioQueueSize.Key,
-		}).Fatal("parsing of env variable is failed")
-	}
-
-	pictureQueueSize, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentPictureQueueSize), 10, 32)
+	requestsQueueSize, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentRequestsQueueSize), 10, 32)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "NewBot",
 			"err":  err,
 			"key":  configs.ContentPictureQueueSize.Key,
-		}).Fatal("service.picture.queue.size parsing is failed")
-	}
-
-	pictureMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentPictureMaxCachedAttachments), 10, 32)
-	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "NewBot",
-			"err":  err,
-			"key":  configs.ContentPictureMaxCachedAttachments.Key,
 		}).Fatal("parsing of env variable is failed")
 	}
 
-	pictureCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault(configs.ContentPictureCacheRefreshThreshold), 32)
-	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "NewBot",
-			"err":  err,
-			"key":  configs.ContentPictureCacheRefreshThreshold.Key,
-		}).Fatal("parsing of env variable is failed")
-	}
-
-	pictureCollector := service.NewCachedRandomAttachmentsContentCollector(vkUserApi, vk.PhotoType, contentSourceRepo, int(pictureMaxCachedAttachments), float32(pictureCacheRefreshThreshold))
+	contentRequestsInputChannel := make(chan *object.ContentRequestCommand, requestsQueueSize)
 
 	return &LongPoolingBot{
-		vkapi:                        communityVkApi,
-		vklp:                         lp,
-		vklpwrapper:                  vklpwrapper.NewWrapper(lp),
-		phrasesRepo:                  phrasesRepo,
-		membershipChecker:            vk.NewChecker(chatId, communityId, membershipCheckInterval, gracePeriod, communityVkApi, phrasesRepo, membershipWarningsRepo),
-		audioContentCourier:          service.NewMediaContentCourier(communityVkApi, vkUserApi, audioCollector, phrasesRepo),
-		audioContentCourierChannel:   make(chan *object.ContentRequestCommand, audioQueueSize),
-		pictureContentCourier:        service.NewMediaContentCourier(communityVkApi, vkUserApi, pictureCollector, phrasesRepo),
-		pictureContentCourierChannel: make(chan *object.ContentRequestCommand, pictureQueueSize),
+		vkapi:                      communityVkApi,
+		vklp:                       lp,
+		vklpwrapper:                vklpwrapper.NewWrapper(lp),
+		phrasesRepo:                phrasesRepo,
+		contentCommandRepo:         contentCommandRepo,
+		membershipChecker:          vk.NewChecker(chatId, communityId, membershipCheckInterval, gracePeriod, communityVkApi, phrasesRepo, membershipWarningsRepo),
+		contentCourier:             service.NewMediaContentCourier(communityVkApi, vkUserApi, phrasesRepo, contentCommandRepo, contentRequestsInputChannel),
+		contentCommandInputChannel: contentRequestsInputChannel,
 	}
 }
 
@@ -161,7 +116,7 @@ func (bot *LongPoolingBot) Serve() {
 	welcomeNewMembers, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.BotFunctionalityWelcomeNewMembers))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "Start",
+			"func": "Serve",
 			"err":  err,
 			"key":  configs.BotFunctionalityWelcomeNewMembers.Key,
 		}).Fatal("parsing of env variable is failed")
@@ -170,7 +125,7 @@ func (bot *LongPoolingBot) Serve() {
 	goodbyeMembers, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.BotFunctionalityGoodbyeMembers))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "Start",
+			"func": "Serve",
 			"err":  err,
 			"key":  configs.BotFunctionalityGoodbyeMembers.Key,
 		}).Fatal("parsing of env variable is failed")
@@ -189,68 +144,36 @@ func (bot *LongPoolingBot) Serve() {
 		}
 	})
 
-	audioRequests, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.BotFunctionalityAudioRequests))
+	contentRequests, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.BotFunctionalityContentCommands))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "Start",
+			"func": "Serve",
 			"err":  err,
-			"key":  configs.BotFunctionalityGoodbyeMembers.Key,
+			"key":  configs.BotFunctionalityContentCommands.Key,
 		}).Fatal("parsing of env variable is failed")
 	}
 
-	if audioRequests {
+	if contentRequests {
 		// run async
-		go bot.audioContentCourier.ReceiveAndDeliver(model.AudioRequestType, bot.audioContentCourierChannel)
-	}
-
-	pictureRequests, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.BotFunctionalityPictureRequests))
-	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "Start",
-			"err":  err,
-			"key":  configs.BotFunctionalityPictureRequests.Key,
-		}).Fatal("parsing of env variable is failed")
-	}
-
-	if pictureRequests {
-		// run async
-		go bot.audioContentCourier.ReceiveAndDeliver(model.PictureRequestType, bot.pictureContentCourierChannel)
+		go bot.contentCourier.ReceiveAndDeliver()
 	}
 
 	infoCommand := utils.GetEnvOrDefault(configs.BotCommandOverrideInfo)
-	audioRequestCommand := utils.GetEnvOrDefault(configs.BotCommandOverrideAudioRequest)
-	pictureRequestCommand := utils.GetEnvOrDefault(configs.BotCommandOverridePictureRequest)
 
 	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 		"func": "Start",
 		"call": infoCommand,
 	}).Info("info command registered")
 
-	if audioRequests {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "Start",
-			"call": audioRequestCommand,
-		}).Info("audio request command registered")
-	}
-
-	if pictureRequests {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "Start",
-			"call": pictureRequestCommand,
-		}).Info("picture request command registered")
-	}
-
 	bot.vklpwrapper.OnNewMessage(func(event wrapper.NewMessage) {
 		switch event.Text {
 		case infoCommand:
 			bot.handleInfoCommand(mapper.NewChatEventFromNewMessage(event))
-		case audioRequestCommand:
-			if audioRequests {
-				bot.handleAudioRequestCommand(mapper.NewContentRequestCommandFromNewMessage(vk.AudioType, event))
-			}
-		case pictureRequestCommand:
-			if pictureRequests {
-				bot.handlePictureRequestCommand(mapper.NewContentRequestCommandFromNewMessage(vk.PhotoType, event))
+		default:
+			if contentRequests {
+				if contentCommand := bot.contentCommandRepo.FindByCommand(event.Text); contentCommand != nil {
+					bot.handleContentRequestCommand(mapper.NewContentCommandRequest(contentCommand, event))
+				}
 			}
 		}
 	})
@@ -366,12 +289,8 @@ func (bot *LongPoolingBot) handleInfoCommand(event *object.ChatEvent) {
 	}
 }
 
-func (bot *LongPoolingBot) handleAudioRequestCommand(request *object.ContentRequestCommand) {
-	bot.audioContentCourierChannel <- request
-}
-
-func (bot *LongPoolingBot) handlePictureRequestCommand(request *object.ContentRequestCommand) {
-	bot.pictureContentCourierChannel <- request
+func (bot *LongPoolingBot) handleContentRequestCommand(request *object.ContentRequestCommand) {
+	bot.contentCommandInputChannel <- request
 }
 
 func (bot *LongPoolingBot) startMembershipCheckingAsync() {

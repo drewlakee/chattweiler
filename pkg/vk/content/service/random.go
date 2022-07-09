@@ -1,10 +1,7 @@
-// Package provides application services
-// for content fetching within VK API
 package service
 
 import (
 	"chattweiler/pkg/repository"
-	"chattweiler/pkg/repository/model"
 	"chattweiler/pkg/utils"
 	"chattweiler/pkg/vk"
 	"math/rand"
@@ -18,7 +15,8 @@ import (
 type CachedRandomAttachmentsContentCollector struct {
 	client                *api.VK
 	attachmentsType       vk.AttachmentsType
-	contentSourceRepo     repository.ContentSourceRepository
+	contentCommand        string
+	contentSourceRepo     repository.ContentCommandRepository
 	maxCachedAttachments  int
 	cachedAttachments     []object.WallWallpostAttachment
 	cacheRefreshThreshold float32
@@ -28,13 +26,15 @@ type CachedRandomAttachmentsContentCollector struct {
 func NewCachedRandomAttachmentsContentCollector(
 	client *api.VK,
 	attachmentsType vk.AttachmentsType,
-	contentSourceRepo repository.ContentSourceRepository,
+	contentCommand string,
+	contentSourceRepo repository.ContentCommandRepository,
 	maxCachedAttachments int,
 	cacheRefreshThreshold float32,
 ) *CachedRandomAttachmentsContentCollector {
 	return &CachedRandomAttachmentsContentCollector{
 		client:                client,
 		attachmentsType:       attachmentsType,
+		contentCommand:        contentCommand,
 		contentSourceRepo:     contentSourceRepo,
 		maxCachedAttachments:  maxCachedAttachments,
 		cachedAttachments:     nil,
@@ -78,10 +78,12 @@ func (collector *CachedRandomAttachmentsContentCollector) getAndRemoveCachedAtta
 }
 
 func (collector *CachedRandomAttachmentsContentCollector) refreshCacheDifference() {
-	source := collector.getRandomSource()
-	wallPostsCount := collector.getSourceWallPostsCount(source)
+	contentCommand := collector.contentSourceRepo.FindByCommand(collector.contentCommand)
+	randomVkCommunity := collector.getRandomVkCommunity(contentCommand.GetSeparatedCommunityIDs())
+
+	wallPostsCount := collector.getWallPostsCount(randomVkCommunity)
 	randomSequenceFetchOffset := collector.getRandomWallPostsOffset(wallPostsCount, collector.maxContentFetchBound)
-	contentSequence := collector.fetchContentSequence(source, randomSequenceFetchOffset, collector.maxContentFetchBound)
+	contentSequence := collector.fetchContentSequence(randomVkCommunity, randomSequenceFetchOffset, collector.maxContentFetchBound)
 	alreadyPickedUpContentVector := make([]int, len(contentSequence))
 	alreadyPickedUpContentCount := 0
 
@@ -118,9 +120,9 @@ func (collector *CachedRandomAttachmentsContentCollector) getRandomWallPostsOffs
 	return randomSequenceFetchOffset
 }
 
-func (collector *CachedRandomAttachmentsContentCollector) fetchContentSequence(source model.ContentSource, offset, count int) []object.WallWallpostAttachment {
+func (collector *CachedRandomAttachmentsContentCollector) fetchContentSequence(community string, offset, count int) []object.WallWallpostAttachment {
 	response, err := collector.client.WallGet(api.Params{
-		"domain": source.VkCommunityID,
+		"domain": community,
 		"count":  count,
 		"offset": offset,
 	})
@@ -147,45 +149,24 @@ func (collector *CachedRandomAttachmentsContentCollector) fetchContentSequence(s
 	return attachments
 }
 
-func (collector *CachedRandomAttachmentsContentCollector) getRandomSource() model.ContentSource {
+func (collector *CachedRandomAttachmentsContentCollector) getRandomVkCommunity(communities []string) string {
 	rand.Seed(time.Now().UnixNano())
-
-	var contentSources []model.ContentSource
-	switch collector.attachmentsType {
-	case vk.AudioType:
-		contentSources = collector.contentSourceRepo.FindAllByType(model.AudioType)
-	case vk.PhotoType:
-		contentSources = collector.contentSourceRepo.FindAllByType(model.PictureType)
-	default:
-		contentSources = []model.ContentSource{}
-	}
-
-	if len(contentSources) == 0 {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CachedRandomAttachmentsContentCollector",
-			"func":     "getRandomSource",
-			"fallback": "empty content source",
-		}).Warn()
-		return model.ContentSource{}
-	} else {
-		return contentSources[rand.Intn(len(contentSources))]
-	}
+	return communities[rand.Intn(len(communities))]
 }
 
-func (collector *CachedRandomAttachmentsContentCollector) getSourceWallPostsCount(source model.ContentSource) int {
+func (collector *CachedRandomAttachmentsContentCollector) getWallPostsCount(community string) int {
 	response, err := collector.client.WallGet(api.Params{
-		"domain": source.VkCommunityID,
+		"domain": community,
 		"count":  1,
 	})
 
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct":   "CachedRandomAttachmentsContentCollector",
-			"func":     "getSourceWallPostsCount",
+			"func":     "getWallPostsCount",
 			"err":      err,
-			"fallback": "0 count",
+			"fallback": "0",
 		}).Error()
-		return 0
 	}
 
 	return response.Count

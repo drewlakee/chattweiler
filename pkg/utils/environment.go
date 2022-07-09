@@ -1,4 +1,4 @@
-// Package provides useful functions for
+// Package utils provides useful functions for
 // the application needs
 package utils
 

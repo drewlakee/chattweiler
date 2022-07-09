@@ -150,34 +150,34 @@ func (repo *CsvObjectStorageCachedPhraseRepository) FindAllByType(phraseType mod
 	return phrases
 }
 
-type CsvObjectStorageCachedContentSourceRepository struct {
+type CsvObjectStorageCachedContentCommandRepository struct {
 	client               *s3.Client
 	bucket               string
 	key                  string
 	cacheRefreshInterval time.Duration
 	lastCacheRefresh     time.Time
 	refreshMutex         sync.Mutex
-	contentSources       []model.ContentSource
+	contentCommands      []model.ContentCommand
 }
 
-func NewCsvObjectStorageCachedContentSourceRepository(client *s3.Client, bucket, key string, cacheRefreshInterval time.Duration) *CsvObjectStorageCachedContentSourceRepository {
-	return &CsvObjectStorageCachedContentSourceRepository{
+func NewCsvObjectStorageCachedContentSourceRepository(client *s3.Client, bucket, key string, cacheRefreshInterval time.Duration) *CsvObjectStorageCachedContentCommandRepository {
+	return &CsvObjectStorageCachedContentCommandRepository{
 		client:               client,
 		bucket:               bucket,
 		key:                  key,
 		cacheRefreshInterval: cacheRefreshInterval,
 		lastCacheRefresh:     time.Now(),
-		contentSources:       nil,
+		contentCommands:      nil,
 	}
 }
 
-func (repo *CsvObjectStorageCachedContentSourceRepository) FindAll() []model.ContentSource {
+func (repo *CsvObjectStorageCachedContentCommandRepository) FindAll() []model.ContentCommand {
 	startTime := time.Now().UnixMilli()
 	if time.Now().Before(repo.lastCacheRefresh.Add(repo.cacheRefreshInterval)) {
 		// atomic content sources read
-		contentSourcesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&repo.contentSources)))
+		contentSourcesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&repo.contentCommands)))
 		if contentSourcesPtr != nil {
-			contentSources := *(*[]model.ContentSource)(contentSourcesPtr)
+			contentSources := *(*[]model.ContentCommand)(contentSourcesPtr)
 			if len(contentSources) != 0 {
 				return contentSources
 			}
@@ -194,50 +194,50 @@ func (repo *CsvObjectStorageCachedContentSourceRepository) FindAll() []model.Con
 	})
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CsvObjectStorageCachedContentSourceRepository",
+			"struct":   "CsvObjectStorageCachedContentCommandRepository",
 			"func":     "FindAll",
 			"err":      err,
 			"bucket":   repo.bucket,
 			"key":      repo.key,
 			"fallback": "empty list",
 		}).Error("s3 client error")
-		return []model.ContentSource{}
+		return []model.ContentCommand{}
 	}
 
-	var updatedContentSources []model.ContentSource
+	var updatedContentSources []model.ContentCommand
 	csvFile, err := io.ReadAll(object.Body)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CsvObjectStorageCachedContentSourceRepository",
+			"struct":   "CsvObjectStorageCachedContentCommandRepository",
 			"func":     "FindAll",
 			"err":      err,
 			"bucket":   repo.bucket,
 			"key":      repo.key,
 			"fallback": "empty list",
 		}).Error("csv file reading error")
-		return []model.ContentSource{}
+		return []model.ContentCommand{}
 	}
 
 	err = csvutil.Unmarshal(csvFile, &updatedContentSources)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CsvObjectStorageCachedContentSourceRepository",
+			"struct":   "CsvObjectStorageCachedContentCommandRepository",
 			"func":     "FindAll",
 			"err":      err,
 			"bucket":   repo.bucket,
 			"key":      repo.key,
 			"fallback": "empty list",
 		}).Error("csv file parsing error")
-		return []model.ContentSource{}
+		return []model.ContentCommand{}
 	}
 
 	// atomic phrases write
 	updatedPhrasesPtr := unsafe.Pointer(&updatedContentSources)
-	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&repo.contentSources)), updatedPhrasesPtr)
+	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&repo.contentCommands)), updatedPhrasesPtr)
 
 	repo.lastCacheRefresh = time.Now()
 	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CsvObjectStorageCachedContentSourceRepository",
+		"struct": "CsvObjectStorageCachedContentCommandRepository",
 		"func":   "FindAll",
 		"bucket": repo.bucket,
 		"key":    repo.key,
@@ -245,14 +245,13 @@ func (repo *CsvObjectStorageCachedContentSourceRepository) FindAll() []model.Con
 	return updatedContentSources
 }
 
-func (repo *CsvObjectStorageCachedContentSourceRepository) FindAllByType(sourceType model.ContentSourceType) []model.ContentSource {
-	var contentSources []model.ContentSource
-	for _, contentSource := range repo.FindAll() {
-		if sourceType == contentSource.SourceType {
-			contentSources = append(contentSources, contentSource)
+func (repo *CsvObjectStorageCachedContentCommandRepository) FindByCommand(commandName string) *model.ContentCommand {
+	for _, contentCommand := range repo.FindAll() {
+		if commandName == contentCommand.Name {
+			return &contentCommand
 		}
 	}
-	return contentSources
+	return nil
 }
 
 type CsvObjectStorageMembershipWarningRepository struct {
@@ -283,7 +282,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) getWarnings(csvFileRead
 	err = csvutil.Unmarshal(csvFile, &warnings)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "CsvObjectStorageCachedContentSourceRepository",
+			"struct": "CsvObjectStorageCachedContentCommandRepository",
 			"func":   "getWarnings",
 		}).Error("csv file parsing error")
 		return nil, err
@@ -341,7 +340,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []mod
 		updatedCsvFile, err := csvutil.Marshal(relevantWarnings)
 		if err != nil {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct":   "CsvObjectStorageCachedContentSourceRepository",
+				"struct":   "CsvObjectStorageCachedContentCommandRepository",
 				"func":     "FindAllRelevant",
 				"err":      err,
 				"bucket":   repo.bucket,
@@ -360,7 +359,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []mod
 		})
 		if err != nil {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct":   "CsvObjectStorageCachedContentSourceRepository",
+				"struct":   "CsvObjectStorageCachedContentCommandRepository",
 				"func":     "FindAllRelevant",
 				"err":      err,
 				"bucket":   repo.bucket,
@@ -372,7 +371,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []mod
 
 		repo.currentDate = now
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "CsvObjectStorageCachedContentSourceRepository",
+			"struct": "CsvObjectStorageCachedContentCommandRepository",
 			"func":   "FindAllRelevant",
 			"bucket": repo.bucket,
 			"key":    newKey,

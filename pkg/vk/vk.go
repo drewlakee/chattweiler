@@ -1,4 +1,4 @@
-// Package provides operational structures and
+// Package vk provides structures and
 // helpful functions to communicate with VK API
 package vk
 
@@ -20,6 +20,7 @@ type AttachmentsType string
 const (
 	AudioType AttachmentsType = "audio"
 	PhotoType AttachmentsType = "photo"
+	Undefined AttachmentsType = "undefined"
 )
 
 func GetUserInfo(vkapi *api.VK, userID string) (*object.UsersUser, error) {

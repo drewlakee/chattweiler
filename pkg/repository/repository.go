@@ -1,5 +1,4 @@
-// Package provides interfaces for repositories and
-// their implementations
+// Package repository provides interfaces for data storages
 package repository
 
 import (
@@ -23,7 +22,7 @@ type MembershipWarningRepository interface {
 	FindAllRelevant() []model.MembershipWarning
 }
 
-type ContentSourceRepository interface {
-	FindAll() []model.ContentSource
-	FindAllByType(sourceType model.ContentSourceType) []model.ContentSource
+type ContentCommandRepository interface {
+	FindAll() []model.ContentCommand
+	FindByCommand(command string) *model.ContentCommand
 }

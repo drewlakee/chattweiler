@@ -1,8 +1,9 @@
-// Package provides object-models for repositories
+// Package model provides objects for repositories
 package model
 
 import (
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -111,8 +112,13 @@ type MembershipWarning struct {
 	IsRelevant     bool      `db:"is_relevant" csv:"is_relevant"`
 }
 
-type ContentSource struct {
-	SourceID      int               `db:"source_id" csv:"source_id"`
-	VkCommunityID string            `db:"vk_community_id" csv:"vk_community_id"`
-	SourceType    ContentSourceType `db:"source_type" csv:"source_type"`
+type ContentCommand struct {
+	ID               int              `db:"id" csv:"id"`
+	Name             string           `db:"name" csv:"name"`
+	MediaContentType MediaContentType `db:"media_type" csv:"media_type"`
+	VkCommunityIDs   string           `db:"community_ids" csv:"community_ids"`
+}
+
+func (contentCommand *ContentCommand) GetSeparatedCommunityIDs() []string {
+	return strings.Split(contentCommand.VkCommunityIDs, ",")
 }

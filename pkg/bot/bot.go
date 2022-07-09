@@ -1,5 +1,4 @@
-// Package provides a bot interface for the application,
-// and it's implementations
+// Package bot provides the bot interface
 package bot
 
 import (
@@ -19,6 +18,5 @@ type Bot interface {
 	handleChatUserLeavingEvent(*object.ChatEvent)
 
 	handleInfoCommand(*object.ChatEvent)
-	handleAudioRequestCommand(*object.ContentRequestCommand)
-	handlePictureRequestCommand(*object.ContentRequestCommand)
+	handleContentRequestCommand(command *object.ContentRequestCommand)
 }

@@ -1,13 +1,11 @@
-// Package provides map functions from API objects
-// to application objects
+// Package mapper provides converters for API objects into application objects
 package mapper
 
 import (
-	"github.com/SevereCloud/vksdk/v2/events"
+	"chattweiler/pkg/repository/model"
 	wrapper "github.com/SevereCloud/vksdk/v2/longpoll-user/v3"
 
 	"chattweiler/pkg/bot/object"
-	"chattweiler/pkg/vk"
 	"strconv"
 )
 
@@ -18,23 +16,16 @@ func NewChatEventFromFromChatInfoChange(event wrapper.ChatInfoChange) *object.Ch
 	}
 }
 
-func NewChatEventFromMessageNewObject(event events.MessageNewObject) *object.ChatEvent {
-	return &object.ChatEvent{
-		UserID: strconv.Itoa(event.Message.Action.MemberID),
-		PeerID: event.Message.PeerID,
-	}
-}
-
 func NewChatEventFromNewMessage(message wrapper.NewMessage) *object.ChatEvent {
 	return &object.ChatEvent{
 		PeerID: message.PeerID,
 	}
 }
 
-func NewContentRequestCommandFromNewMessage(contentType vk.AttachmentsType, message wrapper.NewMessage) *object.ContentRequestCommand {
+func NewContentCommandRequest(command *model.ContentCommand, message wrapper.NewMessage) *object.ContentRequestCommand {
 	return &object.ContentRequestCommand{
-		Type: contentType,
-		RequestEvent: &object.ChatEvent{
+		Command: command,
+		Event: &object.ChatEvent{
 			UserID: message.AdditionalData.From,
 			PeerID: message.PeerID,
 		},

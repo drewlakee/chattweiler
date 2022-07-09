@@ -1,5 +1,4 @@
-// Package provides global configurations with their definitions
-// for the application
+// Package configs provides global application configurations
 package configs
 
 type ApplicationConfig interface {

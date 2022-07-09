@@ -7,7 +7,7 @@ CREATE TABLE membership_warning (
     user_id bigint NOT NULL,
     username name NOT NULL,
     first_warning_ts timestamp with time zone NOT NULL,
-    grace_period_ns bigint NOT NULL,
+    grace_period varchar NOT NULL,
     is_relevant boolean NOT NULL
 );
 
@@ -59,22 +59,23 @@ ALTER TABLE ONLY phrase
 ALTER TABLE ONLY phrase
     ADD CONSTRAINT phrase FOREIGN KEY (type) REFERENCES phrase_type(type_id);
 
-CREATE TABLE source_type (
-     source_type_id integer NOT NULL,
+CREATE TABLE content_command_type (
+     id integer NOT NULL,
      name name NOT NULL
 );
 
-ALTER TABLE ONLY source_type
-    ADD CONSTRAINT source_type_pkey PRIMARY KEY (source_type_id);
+ALTER TABLE ONLY content_command_type
+    ADD CONSTRAINT content_command_type_pkey PRIMARY KEY (id);
 
-CREATE TABLE content_source (
-    source_id integer NOT NULL,
-    vk_community_id character varying(64) NOT NULL,
-    type integer NOT NULL
+CREATE TABLE content_command (
+    id integer NOT NULL,
+    name varchar NOT NULL,
+    media_type integer NOT NULL,
+    community_ids text NOT NULL
 );
 
-ALTER TABLE content_source ALTER COLUMN source_id ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME content_source_source_id_seq
+ALTER TABLE content_command ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME content_command_id_seq
         START WITH 1
         INCREMENT BY 1
         NO MINVALUE
@@ -82,11 +83,14 @@ ALTER TABLE content_source ALTER COLUMN source_id ADD GENERATED ALWAYS AS IDENTI
         CACHE 1
     );
 
-ALTER TABLE ONLY content_source
-    ADD CONSTRAINT content_source_pkey PRIMARY KEY (source_id);
+ALTER TABLE ONLY content_command
+    ADD CONSTRAINT content_command_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY content_source
-    ADD CONSTRAINT content_source FOREIGN KEY (type) REFERENCES source_type(source_type_id);
+ALTER TABLE ONLY content_command
+    ADD CONSTRAINT content_command FOREIGN KEY (media_type) REFERENCES content_command_type(id);
+
+CREATE UNIQUE INDEX uidx_name
+    ON content_command (name);
 
 --
 -- Initial SQL scripts for needed data which the application uses to work by default
@@ -97,9 +101,8 @@ INSERT INTO phrase_type (type_id, name)  VALUES (1, 'welcome');
 INSERT INTO phrase_type (type_id, name)  VALUES (2, 'goodbye');
 INSERT INTO phrase_type (type_id, name)  VALUES (3, 'membership_warning');
 INSERT INTO phrase_type (type_id, name)  VALUES (4, 'info');
-INSERT INTO phrase_type (type_id, name)  VALUES (5, 'audio_request');
-INSERT INTO phrase_type (type_id, name)  VALUES (6, 'picture_request');
+INSERT INTO phrase_type (type_id, name)  VALUES (5, 'content_request');
 
 -- Used content source types in the application
-INSERT INTO source_type (source_type_id, name)  VALUES (1, 'audio');
-INSERT INTO source_type (source_type_id, name)  VALUES (2, 'picture');
+INSERT INTO content_command_type (id, name)  VALUES (1, 'audio');
+INSERT INTO content_command_type (id, name)  VALUES (2, 'picture');

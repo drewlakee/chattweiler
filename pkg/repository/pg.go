@@ -202,16 +202,16 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAllRelev
 	return warnings
 }
 
-type CachedPgContentSourceRepository struct {
+type CachedPgContentCommandRepository struct {
 	db                   *sqlx.DB
 	cacheRefreshInterval time.Duration
 	lastCacheRefresh     time.Time
 	refreshMutex         sync.Mutex
-	contentSources       []model.ContentSource
+	contentSources       []model.ContentCommand
 }
 
-func NewCachedPgContentSourceRepository(db *sqlx.DB, cacheRefreshInterval time.Duration) *CachedPgContentSourceRepository {
-	return &CachedPgContentSourceRepository{
+func NewCachedPgContentSourceRepository(db *sqlx.DB, cacheRefreshInterval time.Duration) *CachedPgContentCommandRepository {
+	return &CachedPgContentCommandRepository{
 		db:                   db,
 		cacheRefreshInterval: cacheRefreshInterval,
 		lastCacheRefresh:     time.Now(),
@@ -219,17 +219,17 @@ func NewCachedPgContentSourceRepository(db *sqlx.DB, cacheRefreshInterval time.D
 	}
 }
 
-func (cachedPgContentSourceRepository *CachedPgContentSourceRepository) FindAll() []model.ContentSource {
+func (repo *CachedPgContentCommandRepository) FindAll() []model.ContentCommand {
 	startTime := time.Now().UnixMilli()
 	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CachedPgContentSourceRepository",
+		"struct": "CachedPgContentCommandRepository",
 		"func":   "FindAll",
-	}).Info("Updating content sources cache...")
-	if time.Now().Before(cachedPgContentSourceRepository.lastCacheRefresh.Add(cachedPgContentSourceRepository.cacheRefreshInterval)) {
+	}).Info("Updating content commands cache...")
+	if time.Now().Before(repo.lastCacheRefresh.Add(repo.cacheRefreshInterval)) {
 		// atomic content sources read
-		contentSourcesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&cachedPgContentSourceRepository.contentSources)))
+		contentSourcesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&repo.contentSources)))
 		if contentSourcesPtr != nil {
-			contentSources := *(*[]model.ContentSource)(contentSourcesPtr)
+			contentSources := *(*[]model.ContentCommand)(contentSourcesPtr)
 			if len(contentSources) != 0 {
 				return contentSources
 			}
@@ -237,45 +237,44 @@ func (cachedPgContentSourceRepository *CachedPgContentSourceRepository) FindAll(
 	}
 
 	// cache refresh lock
-	cachedPgContentSourceRepository.refreshMutex.Lock()
-	defer cachedPgContentSourceRepository.refreshMutex.Unlock()
+	repo.refreshMutex.Lock()
+	defer repo.refreshMutex.Unlock()
 
 	query :=
-		"SELECT source_id, vk_community_id, st.name AS source_type " +
-			"FROM content_source AS cs, source_type AS st " +
-			"WHERE cs.type = st.source_type_id "
+		"SELECT id, name, st.name AS media_type " +
+			"FROM content_command AS cc, content_command_type AS cct " +
+			"WHERE cc.media_type = cct.id "
 
-	var updatedContentSources []model.ContentSource
-	err := cachedPgContentSourceRepository.db.Select(&updatedContentSources, query)
+	var updatedContentSources []model.ContentCommand
+	err := repo.db.Select(&updatedContentSources, query)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CachedPgContentSourceRepository",
+			"struct":   "CachedPgContentCommandRepository",
 			"func":     "FindAll",
 			"err":      err,
 			"query":    query,
 			"fallback": "empty list",
 		}).Error()
-		return []model.ContentSource{}
+		return []model.ContentCommand{}
 	}
 
 	// atomic content source write
 	updatedUpdatedContentSourcesPtr := unsafe.Pointer(&updatedContentSources)
-	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&cachedPgContentSourceRepository.contentSources)), updatedUpdatedContentSourcesPtr)
+	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&repo.contentSources)), updatedUpdatedContentSourcesPtr)
 
-	cachedPgContentSourceRepository.lastCacheRefresh = time.Now()
+	repo.lastCacheRefresh = time.Now()
 	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CachedPgContentSourceRepository",
+		"struct": "CachedPgContentCommandRepository",
 		"func":   "FindAll",
-	}).Info("Content sources cache successfully updated for ", time.Now().UnixMilli()-startTime, "ms")
+	}).Info("Content commands cache successfully updated for ", time.Now().UnixMilli()-startTime, "ms")
 	return updatedContentSources
 }
 
-func (cachedPgContentSourceRepository *CachedPgContentSourceRepository) FindAllByType(sourceType model.ContentSourceType) []model.ContentSource {
-	var contentSources []model.ContentSource
-	for _, contentSource := range cachedPgContentSourceRepository.FindAll() {
-		if sourceType == contentSource.SourceType {
-			contentSources = append(contentSources, contentSource)
+func (repo *CachedPgContentCommandRepository) FindByCommand(commandName string) *model.ContentCommand {
+	for _, contentCommand := range repo.FindAll() {
+		if commandName == contentCommand.Name {
+			return &contentCommand
 		}
 	}
-	return contentSources
+	return nil
 }

@@ -1,8 +1,8 @@
-// Package provides object sturctures which bot uses
-// to operate
+// Package object provides structures which are used by bot
 package object
 
 import (
+	"chattweiler/pkg/repository/model"
 	"chattweiler/pkg/vk"
 )
 
@@ -12,6 +12,17 @@ type ChatEvent struct {
 }
 
 type ContentRequestCommand struct {
-	Type         vk.AttachmentsType
-	RequestEvent *ChatEvent
+	Command *model.ContentCommand
+	Event   *ChatEvent
+}
+
+func (request *ContentRequestCommand) GetAttachmentsType() vk.AttachmentsType {
+	switch request.Command.MediaContentType {
+	case model.PictureType:
+		return vk.PhotoType
+	case model.AudioType:
+		return vk.AudioType
+	}
+
+	return vk.Undefined
 }

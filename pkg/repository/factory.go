@@ -124,8 +124,8 @@ func createPostgresqlCachedPhraseRepository() PhraseRepository {
 	return NewCachedPgPhraseRepository(getPostgresqlConnection(), pgPhrasesCacheRefreshInterval)
 }
 
-func CreateContentSourceRepository(repoType RepositoryType) ContentSourceRepository {
-	var repo ContentSourceRepository
+func CreateContentSourceRepository(repoType RepositoryType) ContentCommandRepository {
+	var repo ContentCommandRepository
 	switch repoType {
 	case CsvYandexObjectStorage:
 		repo = createCsvObjectStorageCachedContentSourceRepository()
@@ -138,13 +138,13 @@ func CreateContentSourceRepository(repoType RepositoryType) ContentSourceReposit
 	return repo
 }
 
-func createCsvObjectStorageCachedContentSourceRepository() *CsvObjectStorageCachedContentSourceRepository {
-	cacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(configs.ContentSourceCacheRefreshInterval))
+func createCsvObjectStorageCachedContentSourceRepository() *CsvObjectStorageCachedContentCommandRepository {
+	cacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(configs.ContentCommandCacheRefreshInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createCsvObjectStorageCachedContentSourceRepository",
 			"err":  err,
-			"key":  configs.ContentSourceCacheRefreshInterval.Key,
+			"key":  configs.ContentCommandCacheRefreshInterval.Key,
 		}).Fatal("parsing of env variable is failed")
 	}
 
@@ -156,13 +156,13 @@ func createCsvObjectStorageCachedContentSourceRepository() *CsvObjectStorageCach
 	)
 }
 
-func createPostgresqlCachedContentSourceRepository() ContentSourceRepository {
-	pgContentSourceCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(configs.ContentSourceCacheRefreshInterval))
+func createPostgresqlCachedContentSourceRepository() ContentCommandRepository {
+	pgContentSourceCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(configs.ContentCommandCacheRefreshInterval))
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func": "createPostgresqlCachedContentSourceRepository",
 			"err":  err,
-			"key":  configs.ContentSourceCacheRefreshInterval.Key,
+			"key":  configs.ContentCommandCacheRefreshInterval.Key,
 		}).Fatal("parsing of env variable is failed")
 	}
 

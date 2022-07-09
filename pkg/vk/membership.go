@@ -131,8 +131,8 @@ func (checker *Checker) checkChatForNewWarning(members map[int]object.UsersUser,
 			messageToSend := BuildMessageUsingPersonalizedPhrase(
 				peerId,
 				&userProfile,
-				model.MembershipWarninType,
-				checker.phrasesRepo.FindAllByType(model.MembershipWarninType),
+				model.MembershipWarningType,
+				checker.phrasesRepo.FindAllByType(model.MembershipWarningType),
 			)
 
 			if _, messageContainsPhrase := messageToSend["message"]; !messageContainsPhrase {
