@@ -80,10 +80,15 @@ func (collector *CachedRandomAttachmentsContentCollector) getAndRemoveCachedAtta
 func (collector *CachedRandomAttachmentsContentCollector) refreshCacheDifference() {
 	contentCommand := collector.contentSourceRepo.FindByCommand(collector.contentCommand)
 	randomVkCommunity := collector.getRandomVkCommunity(contentCommand.GetSeparatedCommunityIDs())
-
 	wallPostsCount := collector.getWallPostsCount(randomVkCommunity)
 	randomSequenceFetchOffset := collector.getRandomWallPostsOffset(wallPostsCount, collector.maxContentFetchBound)
 	contentSequence := collector.fetchContentSequence(randomVkCommunity, randomSequenceFetchOffset, collector.maxContentFetchBound)
+	collector.cachedAttachments = append(collector.cachedAttachments, collector.gatherDifference(contentSequence)...)
+}
+
+func (collector *CachedRandomAttachmentsContentCollector) gatherDifference(
+	contentSequence []object.WallWallpostAttachment,
+) []object.WallWallpostAttachment {
 	alreadyPickedUpContentVector := make([]int, len(contentSequence))
 	alreadyPickedUpContentCount := 0
 
@@ -104,8 +109,7 @@ func (collector *CachedRandomAttachmentsContentCollector) refreshCacheDifference
 		alreadyPickedUpContentCount++
 		difference--
 	}
-
-	collector.cachedAttachments = append(collector.cachedAttachments, collectResult...)
+	return collectResult
 }
 
 func (collector *CachedRandomAttachmentsContentCollector) getRandomWallPostsOffset(wallPostsCount, maxContentFetchBound int) int {
@@ -120,7 +124,11 @@ func (collector *CachedRandomAttachmentsContentCollector) getRandomWallPostsOffs
 	return randomSequenceFetchOffset
 }
 
-func (collector *CachedRandomAttachmentsContentCollector) fetchContentSequence(community string, offset, count int) []object.WallWallpostAttachment {
+func (collector *CachedRandomAttachmentsContentCollector) fetchContentSequence(
+	community string,
+	offset,
+	count int,
+) []object.WallWallpostAttachment {
 	response, err := collector.client.WallGet(api.Params{
 		"domain": community,
 		"count":  count,

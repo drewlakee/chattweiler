@@ -9,6 +9,7 @@ import (
 	"chattweiler/pkg/vk"
 	"chattweiler/pkg/vk/content"
 	"strconv"
+	"time"
 
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/object"
@@ -20,12 +21,14 @@ var packageLogFields = logrus.Fields{
 }
 
 type MediaContentCourier struct {
-	communityVkApi     *api.VK
-	userVkApi          *api.VK
-	phrasesRepo        repository.PhraseRepository
-	contentCommandRepo repository.ContentCommandRepository
-	listeningChannel   chan *botobject.ContentRequestCommand
-	commandCollector   map[string]content.AttachmentsContentCollector
+	communityVkApi          *api.VK
+	userVkApi               *api.VK
+	phrasesRepo             repository.PhraseRepository
+	contentCommandRepo      repository.ContentCommandRepository
+	listeningChannel        chan *botobject.ContentRequestCommand
+	commandCollectors       map[string]content.AttachmentsContentCollector
+	garbageCleaningInterval time.Duration
+	lastTsGarbageCollected  time.Time
 }
 
 func NewMediaContentCourier(
@@ -34,51 +37,44 @@ func NewMediaContentCourier(
 	phrasesRepo repository.PhraseRepository,
 	contentCommandRepo repository.ContentCommandRepository,
 	listeningChannel chan *botobject.ContentRequestCommand,
+	garbageCleaningInterval time.Duration,
 ) *MediaContentCourier {
 	return &MediaContentCourier{
-		communityVkApi:     communityVkApi,
-		userVkApi:          userVkApi,
-		phrasesRepo:        phrasesRepo,
-		contentCommandRepo: contentCommandRepo,
-		listeningChannel:   listeningChannel,
-		commandCollector:   make(map[string]content.AttachmentsContentCollector),
+		communityVkApi:          communityVkApi,
+		userVkApi:               userVkApi,
+		phrasesRepo:             phrasesRepo,
+		contentCommandRepo:      contentCommandRepo,
+		listeningChannel:        listeningChannel,
+		commandCollectors:       make(map[string]content.AttachmentsContentCollector),
+		lastTsGarbageCollected:  time.Now(),
+		garbageCleaningInterval: garbageCleaningInterval,
 	}
 }
 
 func (courier *MediaContentCourier) ReceiveAndDeliver() {
 	for {
 		select {
-		case request := <-courier.listeningChannel:
-			user, err := vk.GetUserInfo(courier.communityVkApi, request.Event.UserID)
+		case received := <-courier.listeningChannel:
+			user, err := vk.GetUserInfo(courier.communityVkApi, received.Event.UserID)
 			if err != nil {
 				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 					"struct": "MediaContentCourier",
 					"func":   "ReceiveAndDeliver",
 					"err":    err,
-					"user":   request.Event.UserID,
+					"user":   received.Event.UserID,
 				}).Error("get user info error")
 				continue
 			}
 
-			messageToSend := vk.BuildMessageUsingPersonalizedPhrase(
-				request.Event.PeerID,
-				user,
-				model.ContentRequestType,
-				courier.phrasesRepo.FindAllByType(model.ContentRequestType),
-			)
-
-			if collector := courier.commandCollector[request.Command.Name]; collector == nil {
-				courier.commandCollector[request.Command.Name] = NewCachedRandomAttachmentsContentCollector(
-					courier.userVkApi,
-					request.GetAttachmentsType(),
-					request.Command.Name,
-					courier.contentCommandRepo,
-					courier.getMaxCachedAttachments(request.GetAttachmentsType()),
-					courier.getCacheRefreshThreshold(request.GetAttachmentsType()),
-				)
+			if _, alreadyExists := courier.commandCollectors[received.Command.Name]; !alreadyExists {
+				courier.createNewCollectorForCommand(received)
 			}
 
-			mediaContent := courier.commandCollector[request.Command.Name].CollectOne()
+			if courier.lastTsGarbageCollected.Add(courier.garbageCleaningInterval).Before(time.Now()) {
+				courier.removeGarbageCollectors()
+			}
+
+			mediaContent := courier.commandCollectors[received.Command.Name].CollectOne()
 			if len(mediaContent.Type) == 0 {
 				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 					"func":   "ReceiveAndDeliver",
@@ -87,17 +83,49 @@ func (courier *MediaContentCourier) ReceiveAndDeliver() {
 				continue
 			}
 
-			messageToSend["attachment"] = courier.resolveContentID(mediaContent, request.GetAttachmentsType())
-			_, err = courier.communityVkApi.MessagesSend(messageToSend)
-			if _, messageContainsPhrase := messageToSend["message"]; !messageContainsPhrase {
-				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-					"func":   "ReceiveAndDeliver",
-					"struct": "MediaContentCourier",
-					"err":    err,
-				}).Error("message send error")
-			}
+			courier.deliverContentResponse(received, user, mediaContent)
 		}
 	}
+}
+
+func (courier *MediaContentCourier) deliverContentResponse(
+	request *botobject.ContentRequestCommand,
+	user *object.UsersUser,
+	mediaContent object.WallWallpostAttachment,
+) {
+	messageToSend := courier.getResponseMessage(request, user)
+	messageToSend["attachment"] = courier.resolveContentID(mediaContent, request.GetAttachmentsType())
+	_, err := courier.communityVkApi.MessagesSend(messageToSend)
+	if _, messageContainsPhrase := messageToSend["message"]; !messageContainsPhrase {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func":   "deliverContentResponse",
+			"struct": "MediaContentCourier",
+			"err":    err,
+		}).Error("message send error")
+	}
+}
+
+func (courier *MediaContentCourier) createNewCollectorForCommand(request *botobject.ContentRequestCommand) {
+	courier.commandCollectors[request.Command.Name] = NewCachedRandomAttachmentsContentCollector(
+		courier.userVkApi,
+		request.GetAttachmentsType(),
+		request.Command.Name,
+		courier.contentCommandRepo,
+		courier.getMaxCachedAttachments(request.GetAttachmentsType()),
+		courier.getCacheRefreshThreshold(request.GetAttachmentsType()),
+	)
+}
+
+func (courier *MediaContentCourier) getResponseMessage(
+	request *botobject.ContentRequestCommand,
+	user *object.UsersUser,
+) api.Params {
+	return vk.BuildMessageUsingPersonalizedPhrase(
+		request.Event.PeerID,
+		user,
+		model.ContentRequestType,
+		courier.phrasesRepo.FindAllByType(model.ContentRequestType),
+	)
 }
 
 func (courier *MediaContentCourier) getMaxCachedAttachments(mediaType vk.AttachmentsType) int {
@@ -106,9 +134,11 @@ func (courier *MediaContentCourier) getMaxCachedAttachments(mediaType vk.Attachm
 		pictureMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentPictureMaxCachedAttachments), 10, 32)
 		if err != nil {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"func": "MediaContentCourier",
-				"err":  err,
-				"key":  configs.ContentPictureMaxCachedAttachments.Key,
+				"struct": "MediaContentCourier",
+				"func":   "getMaxCachedAttachments",
+				"type":   vk.PhotoType,
+				"err":    err,
+				"key":    configs.ContentPictureMaxCachedAttachments.Key,
 			}).Fatal("parsing of env variable is failed")
 		}
 
@@ -117,9 +147,11 @@ func (courier *MediaContentCourier) getMaxCachedAttachments(mediaType vk.Attachm
 		audioMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentAudioMaxCachedAttachments), 10, 32)
 		if err != nil {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"func": "MediaContentCourier",
-				"err":  err,
-				"key":  configs.ContentAudioMaxCachedAttachments.Key,
+				"struct": "MediaContentCourier",
+				"func":   "getMaxCachedAttachments",
+				"type":   vk.AudioType,
+				"err":    err,
+				"key":    configs.ContentAudioMaxCachedAttachments.Key,
 			}).Fatal("parsing of env variable is failed")
 		}
 
@@ -135,9 +167,11 @@ func (courier *MediaContentCourier) getCacheRefreshThreshold(mediaType vk.Attach
 		pictureCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault(configs.ContentPictureCacheRefreshThreshold), 32)
 		if err != nil {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"func": "MediaContentCourier",
-				"err":  err,
-				"key":  configs.ContentPictureCacheRefreshThreshold.Key,
+				"struct": "MediaContentCourier",
+				"func":   "getCacheRefreshThreshold",
+				"type":   vk.PhotoType,
+				"err":    err,
+				"key":    configs.ContentPictureCacheRefreshThreshold.Key,
 			}).Fatal("parsing of env variable is failed")
 		}
 
@@ -146,9 +180,11 @@ func (courier *MediaContentCourier) getCacheRefreshThreshold(mediaType vk.Attach
 		audioCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault(configs.ContentAudioCacheRefreshThreshold), 32)
 		if err != nil {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"func": "MediaContentCourier",
-				"err":  err,
-				"key":  configs.ContentAudioCacheRefreshThreshold.Key,
+				"struct": "MediaContentCourier",
+				"func":   "getCacheRefreshThreshold",
+				"type":   vk.AudioType,
+				"err":    err,
+				"key":    configs.ContentAudioCacheRefreshThreshold.Key,
 			}).Fatal("parsing of env variable is failed")
 		}
 
@@ -170,4 +206,18 @@ func (courier *MediaContentCourier) resolveContentID(
 	}
 
 	return ""
+}
+
+func (courier *MediaContentCourier) removeGarbageCollectors() {
+	relevantCommands := courier.contentCommandRepo.FindAll()
+	relevantCommandsMap := make(map[string]bool, len(relevantCommands))
+	for _, command := range relevantCommands {
+		relevantCommandsMap[command.Name] = true
+	}
+
+	for commandName, _ := range courier.commandCollectors {
+		if _, exist := relevantCommandsMap[commandName]; !exist {
+			delete(courier.commandCollectors, commandName)
+		}
+	}
 }

@@ -177,9 +177,9 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindAll() []model.Co
 		// atomic content sources read
 		contentSourcesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&repo.contentCommands)))
 		if contentSourcesPtr != nil {
-			contentSources := *(*[]model.ContentCommand)(contentSourcesPtr)
-			if len(contentSources) != 0 {
-				return contentSources
+			contentCommands := *(*[]model.ContentCommand)(contentSourcesPtr)
+			if len(contentCommands) != 0 {
+				return contentCommands
 			}
 		}
 	}
@@ -204,7 +204,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindAll() []model.Co
 		return []model.ContentCommand{}
 	}
 
-	var updatedContentSources []model.ContentCommand
+	var updatedContentCommands []model.ContentCommand
 	csvFile, err := io.ReadAll(object.Body)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
@@ -218,7 +218,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindAll() []model.Co
 		return []model.ContentCommand{}
 	}
 
-	err = csvutil.Unmarshal(csvFile, &updatedContentSources)
+	err = csvutil.Unmarshal(csvFile, &updatedContentCommands)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct":   "CsvObjectStorageCachedContentCommandRepository",
@@ -232,7 +232,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindAll() []model.Co
 	}
 
 	// atomic phrases write
-	updatedPhrasesPtr := unsafe.Pointer(&updatedContentSources)
+	updatedPhrasesPtr := unsafe.Pointer(&updatedContentCommands)
 	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&repo.contentCommands)), updatedPhrasesPtr)
 
 	repo.lastCacheRefresh = time.Now()
@@ -242,7 +242,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindAll() []model.Co
 		"bucket": repo.bucket,
 		"key":    repo.key,
 	}).Info("Cache successfully updated for ", time.Now().UnixMilli()-startTime, "ms")
-	return updatedContentSources
+	return updatedContentCommands
 }
 
 func (repo *CsvObjectStorageCachedContentCommandRepository) FindByCommand(commandName string) *model.ContentCommand {

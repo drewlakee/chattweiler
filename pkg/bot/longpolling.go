@@ -92,13 +92,22 @@ func NewLongPoolingBot(
 	requestsQueueSize, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentRequestsQueueSize), 10, 32)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "NewBot",
+			"func": "NewLongPoolingBot",
 			"err":  err,
 			"key":  configs.ContentPictureQueueSize.Key,
 		}).Fatal("parsing of env variable is failed")
 	}
 
 	contentRequestsInputChannel := make(chan *object.ContentRequestCommand, requestsQueueSize)
+
+	garbageCollectorsCleaningInterval, err := time.ParseDuration(utils.GetEnvOrDefault(configs.ContentGarbageCollectorsCleaningInterval))
+	if err != nil {
+		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+			"func": "NewBot",
+			"err":  err,
+			"key":  configs.ContentPictureQueueSize.Key,
+		}).Fatal("parsing of env variable is failed")
+	}
 
 	return &LongPoolingBot{
 		vkapi:                      communityVkApi,
@@ -107,7 +116,7 @@ func NewLongPoolingBot(
 		phrasesRepo:                phrasesRepo,
 		contentCommandRepo:         contentCommandRepo,
 		membershipChecker:          vk.NewChecker(chatId, communityId, membershipCheckInterval, gracePeriod, communityVkApi, phrasesRepo, membershipWarningsRepo),
-		contentCourier:             service.NewMediaContentCourier(communityVkApi, vkUserApi, phrasesRepo, contentCommandRepo, contentRequestsInputChannel),
+		contentCourier:             service.NewMediaContentCourier(communityVkApi, vkUserApi, phrasesRepo, contentCommandRepo, contentRequestsInputChannel, garbageCollectorsCleaningInterval),
 		contentCommandInputChannel: contentRequestsInputChannel,
 	}
 }
@@ -132,7 +141,7 @@ func (bot *LongPoolingBot) Serve() {
 	}
 
 	bot.vklpwrapper.OnChatInfoChange(func(event wrapper.ChatInfoChange) {
-		switch vk.ResolveChatInfoChangeEventType(event) {
+		switch resolveChatInfoChangeEventType(event) {
 		case vklpwrapper.ChatUserCome:
 			if welcomeNewMembers {
 				bot.handleChatUserJoinEvent(mapper.NewChatEventFromFromChatInfoChange(event))
@@ -306,4 +315,8 @@ func (bot *LongPoolingBot) startMembershipCheckingAsync() {
 	if checkMembership {
 		go bot.membershipChecker.LoopCheck()
 	}
+}
+
+func resolveChatInfoChangeEventType(event wrapper.ChatInfoChange) wrapper.TypeID {
+	return event.TypeID - 1
 }

@@ -13,7 +13,7 @@ import (
 func main() {
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 
-	var createRepositoryType repository.RepositoryType
+	var createRepositoryType repository.StorageType
 	if utils.GetEnvOrDefault(configs.PgDatasourceString) != "" {
 		createRepositoryType = repository.Postgresql
 	} else {

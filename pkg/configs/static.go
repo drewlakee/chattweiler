@@ -16,6 +16,7 @@ var PhrasesSuppressLogsMissedPhrases = NewOptionalConfig("phrases.suppress.logs.
 
 var ContentCommandCacheRefreshInterval = NewOptionalConfig("content.command.cache.refresh.interval", "15m")
 var ContentRequestsQueueSize = NewOptionalConfig("content.requests.queue.size", "100")
+var ContentGarbageCollectorsCleaningInterval = NewOptionalConfig("content.garbage.collectors.cleaning.interval", "10m")
 
 var ContentAudioMaxCachedAttachments = NewOptionalConfig("content.audio.max.cached.attachments", "100")
 var ContentAudioCacheRefreshThreshold = NewOptionalConfig("content.audio.cache.refresh.threshold", "0.2")

@@ -1,4 +1,4 @@
-// Package provides helpful functions to
+// Package roulette provides helpful functions to
 // items picking by their probability
 // https://en.wikipedia.org/wiki/Fitness_proportionate_selection
 package roulette
@@ -28,7 +28,7 @@ func Spin(phrases ...model.Phrase) model.Phrase {
 	if direction == 1 {
 		for _, phrase := range phrases {
 			bingo -= phrase.GetWeight()
-			if bingo == 0 || bingo < 0 {
+			if bingo <= 0 {
 				return phrase
 			}
 		}
@@ -37,12 +37,11 @@ func Spin(phrases ...model.Phrase) model.Phrase {
 		for index >= 0 {
 			phrase := phrases[index]
 			bingo -= phrase.GetWeight()
-			if bingo == 0 || bingo < 0 {
+			if bingo <= 0 {
 				return phrase
 			}
 			index--
 		}
-
 	}
 
 	return nil

@@ -153,6 +153,8 @@ func (checker *Checker) LoopCheck() {
 	successfulCheckAttempt := true
 
 	for {
+		// made in order to leverage cpu load
+		// if constant error happens
 		if !successfulCheckAttempt {
 			time.Sleep(checker.checkInterval)
 		}

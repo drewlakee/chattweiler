@@ -13,11 +13,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type RepositoryType string
+type StorageType string
 
 const (
-	Postgresql             RepositoryType = "postgresql"
-	CsvYandexObjectStorage RepositoryType = "csv_yandex_object_storage"
+	Postgresql             StorageType = "postgresql"
+	CsvYandexObjectStorage StorageType = "csv_yandex_object_storage"
 )
 
 var pgConnectionSingleton *sqlx.DB
@@ -79,7 +79,7 @@ func getObjectStorageClient() *s3.Client {
 	return objectStorageClientSingleton
 }
 
-func CreatePhraseRepository(repoType RepositoryType) PhraseRepository {
+func CreatePhraseRepository(repoType StorageType) PhraseRepository {
 	var repo PhraseRepository
 	switch repoType {
 	case CsvYandexObjectStorage:
@@ -124,7 +124,7 @@ func createPostgresqlCachedPhraseRepository() PhraseRepository {
 	return NewCachedPgPhraseRepository(getPostgresqlConnection(), pgPhrasesCacheRefreshInterval)
 }
 
-func CreateContentSourceRepository(repoType RepositoryType) ContentCommandRepository {
+func CreateContentSourceRepository(repoType StorageType) ContentCommandRepository {
 	var repo ContentCommandRepository
 	switch repoType {
 	case CsvYandexObjectStorage:
@@ -169,7 +169,7 @@ func createPostgresqlCachedContentSourceRepository() ContentCommandRepository {
 	return NewCachedPgContentSourceRepository(getPostgresqlConnection(), pgContentSourceCacheRefreshInterval)
 }
 
-func CreateMembershipWarningRepository(repoType RepositoryType) MembershipWarningRepository {
+func CreateMembershipWarningRepository(repoType StorageType) MembershipWarningRepository {
 	var repo MembershipWarningRepository
 	switch repoType {
 	case CsvYandexObjectStorage:

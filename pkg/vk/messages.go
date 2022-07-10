@@ -27,7 +27,7 @@ func BuildMessageUsingPersonalizedPhrase(
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func":       "BuildMessageUsingPersonalizedPhrase",
 			"phraseType": phrasesType,
-		}).Warn("were passed empty phrases, but a message supposed to be with a phrase")
+		}).Warn("were passed empty phrases, but response message supposed to be with a phrase")
 	}
 
 	builder := params.NewMessagesSendBuilder()
@@ -64,7 +64,7 @@ func BuildMessageUsingPersonalizedPhrase(
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"func":      "BuildMessageUsingPersonalizedPhrase",
 				"phrase_id": phrase.GetID(),
-			}).Warn("phrase is specified with audio accompaniment, but audio_id doesn't pointed")
+			}).Warn("phrase is specified with audio accompaniment but audio ID isn't specified")
 		}
 	}
 
@@ -77,7 +77,7 @@ func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func":     "BuildMessagePhrase",
 			"fallback": "empty api params",
-		}).Warn("empty phrases passed in")
+		}).Warn("empty phrases were passed")
 		return api.Params{}
 	}
 
@@ -93,7 +93,7 @@ func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"func":      "BuildMessagePhrase",
 				"phrase_id": phrase.GetID(),
-			}).Warn("phrase must be with audio, but there is no audio attachment")
+			}).Warn("phrase is specified with audio accompaniment but audio ID isn't specified")
 		}
 	}
 

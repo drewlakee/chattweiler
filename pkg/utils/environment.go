@@ -20,7 +20,7 @@ func iterateOverAllPossibleKeys(key string) string {
 		return value
 	}
 
-	// my.env.var -> my_env_var
+	// my.env.var <-> my_env_var
 	value = os.Getenv(strings.ReplaceAll(key, ".", "_"))
 	if len(value) != 0 {
 		return value
