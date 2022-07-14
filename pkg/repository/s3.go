@@ -247,7 +247,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindAll() []model.Co
 
 func (repo *CsvObjectStorageCachedContentCommandRepository) FindByCommand(commandName string) *model.ContentCommand {
 	for _, contentCommand := range repo.FindAll() {
-		if commandName == contentCommand.Name {
+		if strings.EqualFold(commandName, contentCommand.Name) {
 			return &contentCommand
 		}
 	}

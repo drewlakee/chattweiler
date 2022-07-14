@@ -2,6 +2,7 @@ package repository
 
 import (
 	"chattweiler/pkg/repository/model"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -272,7 +273,7 @@ func (repo *CachedPgContentCommandRepository) FindAll() []model.ContentCommand {
 
 func (repo *CachedPgContentCommandRepository) FindByCommand(commandName string) *model.ContentCommand {
 	for _, contentCommand := range repo.FindAll() {
-		if commandName == contentCommand.Name {
+		if strings.EqualFold(commandName, contentCommand.Name) {
 			return &contentCommand
 		}
 	}
