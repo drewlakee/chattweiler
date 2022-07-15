@@ -73,11 +73,14 @@ func BuildMessageUsingPersonalizedPhrase(
 
 func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 	phrase := roulette.Spin(phrases...)
-	if suppress, _ := strconv.ParseBool(utils.GetEnvOrDefault(configs.PhrasesSuppressLogsMissedPhrases)); !suppress && phrase == nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func":     "BuildMessagePhrase",
-			"fallback": "empty api params",
-		}).Warn("empty phrases were passed")
+
+	if phrase == nil {
+		if suppress, _ := strconv.ParseBool(utils.GetEnvOrDefault(configs.PhrasesSuppressLogsMissedPhrases)); !suppress {
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+				"func":     "BuildMessagePhrase",
+				"fallback": "empty api params",
+			}).Warn("empty phrases were passed")
+		}
 		return api.Params{}
 	}
 

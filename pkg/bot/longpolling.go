@@ -286,15 +286,19 @@ func (bot *LongPoolingBot) handleChatUserLeavingEvent(event *object.ChatEvent) {
 }
 
 func (bot *LongPoolingBot) handleInfoCommand(event *object.ChatEvent) {
-	_, err := bot.vkapi.MessagesSend(vk.BuildMessagePhrase(
+	messageToSend := vk.BuildMessagePhrase(
 		event.PeerID,
 		bot.phrasesRepo.FindAllByType(model.InfoType),
-	))
-	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "handleInfoCommand",
-			"err":  err,
-		}).Error("message sending error")
+	)
+
+	if messageToSend["message"] != nil {
+		_, err := bot.vkapi.MessagesSend(messageToSend)
+		if err != nil {
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+				"func": "handleInfoCommand",
+				"err":  err,
+			}).Error("message sending error")
+		}
 	}
 }
 
