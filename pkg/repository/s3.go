@@ -546,6 +546,10 @@ func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToUnRelevant(w
 		}
 	}
 
+	if len(warningsToUpdateArray) == 0 {
+		return true
+	}
+
 	currentKey := getDateAsString(repo.currentDate)
 	updatedCsvFile, err := csvutil.Marshal(warningsToUpdateArray)
 	if err != nil {
