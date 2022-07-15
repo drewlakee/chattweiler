@@ -498,13 +498,13 @@ func (repo *CsvObjectStorageMembershipWarningRepository) Insert(warning model.Me
 	return true
 }
 
-func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToUnRelevant(warnings ...model.MembershipWarning) bool {
+func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToIrrelevant(warnings ...model.MembershipWarning) bool {
 	now := time.Now()
 	startTime := now.UnixMilli()
 
-	unRelevantWarnings := make(map[int]model.MembershipWarning)
+	irrelevantWarnings := make(map[int]model.MembershipWarning)
 	for _, warning := range warnings {
-		unRelevantWarnings[warning.UserID] = warning
+		irrelevantWarnings[warning.UserID] = warning
 	}
 
 	var warningsToUpdateArray []model.MembershipWarning
@@ -519,7 +519,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToUnRelevant(w
 		if err != nil {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"struct": "CsvObjectStorageMembershipWarningRepository",
-				"func":   "UpdateAllToUnRelevant",
+				"func":   "UpdateAllToIrrelevant",
 				"err":    err,
 				"bucket": repo.bucket,
 				"key":    currentKey,
@@ -531,7 +531,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToUnRelevant(w
 		if err != nil {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"struct": "CsvObjectStorageMembershipWarningRepository",
-				"func":   "UpdateAllToUnRelevant",
+				"func":   "UpdateAllToIrrelevant",
 				"err":    err,
 				"bucket": repo.bucket,
 				"key":    currentKey,
@@ -541,13 +541,9 @@ func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToUnRelevant(w
 	}
 
 	for index, warning := range warningsToUpdateArray {
-		if _, ok := unRelevantWarnings[warning.UserID]; ok {
+		if _, ok := irrelevantWarnings[warning.UserID]; ok {
 			warningsToUpdateArray[index].IsRelevant = false
 		}
-	}
-
-	if len(warningsToUpdateArray) == 0 {
-		return true
 	}
 
 	currentKey := getDateAsString(repo.currentDate)
@@ -555,7 +551,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToUnRelevant(w
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct": "CsvObjectStorageMembershipWarningRepository",
-			"func":   "UpdateAllToUnRelevant",
+			"func":   "UpdateAllToIrrelevant",
 			"err":    err,
 			"bucket": repo.bucket,
 			"key":    currentKey,
@@ -572,7 +568,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToUnRelevant(w
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct": "CsvObjectStorageMembershipWarningRepository",
-			"func":   "UpdateAllToUnRelevant",
+			"func":   "UpdateAllToIrrelevant",
 			"err":    err,
 			"bucket": repo.bucket,
 			"key":    currentKey,
@@ -582,7 +578,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToUnRelevant(w
 
 	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 		"struct": "CsvObjectStorageMembershipWarningRepository",
-		"func":   "UpdateAllToUnRelevant",
+		"func":   "UpdateAllToIrrelevant",
 		"bucket": repo.bucket,
 		"key":    currentKey,
 	}).Info("Updated for ", time.Now().UnixMilli()-startTime, "ms")

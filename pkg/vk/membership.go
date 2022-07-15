@@ -89,7 +89,7 @@ func (checker *Checker) checkAlreadyRelevantMembershipWarnings(members map[int]o
 	}
 
 	if len(expiredWarnings) > 0 {
-		checker.membershipWarningsRepo.UpdateAllToUnRelevant(expiredWarnings...)
+		checker.membershipWarningsRepo.UpdateAllToIrrelevant(expiredWarnings...)
 	}
 
 	return alreadyForewarnedUsers, nil

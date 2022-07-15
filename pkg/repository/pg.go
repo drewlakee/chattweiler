@@ -134,7 +134,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) Insert(warni
 	return true
 }
 
-func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToUnRelevant(warnings ...model.MembershipWarning) bool {
+func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToIrrelevant(warnings ...model.MembershipWarning) bool {
 	update :=
 		"UPDATE membership_warning " +
 			"SET is_relevant=false " +
@@ -144,7 +144,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToU
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct": "PgMembershipWarningRepository",
-			"func":   "UpdateAllToUnRelevant",
+			"func":   "UpdateAllToIrrelevant",
 			"err":    err,
 			"query":  update,
 		}).Error()
@@ -156,7 +156,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToU
 		if err != nil {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 				"struct": "PgMembershipWarningRepository",
-				"func":   "UpdateAllToUnRelevant",
+				"func":   "UpdateAllToIrrelevant",
 				"err":    err,
 				"query":  update,
 				"param":  warning,
@@ -170,7 +170,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToU
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"struct": "PgMembershipWarningRepository",
-			"func":   "UpdateAllToUnRelevant",
+			"func":   "UpdateAllToIrrelevant",
 			"err":    err,
 			"query":  update,
 		}).Error()
