@@ -168,12 +168,6 @@ func (bot *LongPoolingBot) Serve() {
 	}
 
 	infoCommand := utils.GetEnvOrDefault(configs.BotCommandOverrideInfo)
-
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"func": "Start",
-		"call": infoCommand,
-	}).Info("info command registered")
-
 	bot.vklpwrapper.OnNewMessage(func(event wrapper.NewMessage) {
 		switch event.Text {
 		case infoCommand:

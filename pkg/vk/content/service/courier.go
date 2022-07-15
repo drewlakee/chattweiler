@@ -96,7 +96,7 @@ func (courier *MediaContentCourier) deliverContentResponse(
 	messageToSend := courier.getResponseMessage(request, user)
 	messageToSend["attachment"] = courier.resolveContentID(mediaContent, request.GetAttachmentsType())
 	_, err := courier.communityVkApi.MessagesSend(messageToSend)
-	if _, messageContainsPhrase := messageToSend["message"]; !messageContainsPhrase {
+	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
 			"func":   "deliverContentResponse",
 			"struct": "MediaContentCourier",

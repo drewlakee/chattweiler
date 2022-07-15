@@ -23,11 +23,13 @@ func BuildMessageUsingPersonalizedPhrase(
 	phrases []model.Phrase,
 ) api.Params {
 	phrase := roulette.Spin(phrases...)
-	if suppress, _ := strconv.ParseBool(utils.GetEnvOrDefault(configs.PhrasesSuppressLogsMissedPhrases)); !suppress && phrase == nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func":       "BuildMessageUsingPersonalizedPhrase",
-			"phraseType": phrasesType,
-		}).Warn("were passed empty phrases, but response message supposed to be with a phrase")
+	if phrase == nil {
+		if suppress, _ := strconv.ParseBool(utils.GetEnvOrDefault(configs.PhrasesSuppressLogsMissedPhrases)); !suppress {
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+				"func":       "BuildMessageUsingPersonalizedPhrase",
+				"phraseType": phrasesType,
+			}).Warn("were passed empty phrases, but response message supposed to be with a phrase")
+		}
 	}
 
 	builder := params.NewMessagesSendBuilder()
@@ -81,12 +83,17 @@ func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 				"fallback": "empty api params",
 			}).Warn("empty phrases were passed")
 		}
-		return api.Params{}
 	}
 
 	builder := params.NewMessagesSendBuilder()
 	builder.PeerID(peerId)
 	builder.RandomID(0)
+
+	if phrase == nil {
+		builder.Message("")
+		return builder.Params
+	}
+
 	builder.Message(phrase.GetText())
 
 	if phrase.HasAudioAccompaniment() {

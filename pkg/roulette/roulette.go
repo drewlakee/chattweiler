@@ -10,6 +10,10 @@ import (
 )
 
 func Spin(phrases ...model.Phrase) model.Phrase {
+	if len(phrases) == 0 {
+		return nil
+	}
+
 	totalWeight := 0
 	for _, phrase := range phrases {
 		totalWeight += phrase.GetWeight()
