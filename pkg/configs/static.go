@@ -22,6 +22,8 @@ var ContentAudioMaxCachedAttachments = NewOptionalConfig("content.audio.max.cach
 var ContentAudioCacheRefreshThreshold = NewOptionalConfig("content.audio.cache.refresh.threshold", "0.2")
 var ContentPictureMaxCachedAttachments = NewOptionalConfig("content.picture.max.cached.attachments", "100")
 var ContentPictureCacheRefreshThreshold = NewOptionalConfig("content.picture.cache.refresh.threshold", "0.2")
+var ContentVideoMaxCachedAttachments = NewOptionalConfig("content.video.max.cached.attachments", "100")
+var ContentVideoCacheRefreshThreshold = NewOptionalConfig("content.video.cache.refresh.threshold", "0.2")
 var ContentPictureQueueSize = NewOptionalConfig("content.picture.queue.size", "100")
 
 var BotCommandOverrideInfo = NewOptionalConfig("bot.command.override.info", "info")

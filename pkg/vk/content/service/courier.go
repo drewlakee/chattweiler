@@ -128,7 +128,7 @@ func (courier *MediaContentCourier) askToRetryRequest(
 		courier.phrasesRepo.FindAllByType(model.RetryType),
 	)
 
-	if messageToSend["message"] != nil && messageToSend["message"] != "" {
+	if messageToSend["message"] != nil {
 		_, err := courier.communityVkApi.MessagesSend(messageToSend)
 		if err != nil {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
@@ -180,6 +180,19 @@ func (courier *MediaContentCourier) getMaxCachedAttachments(mediaType vk.Attachm
 		}
 
 		return int(audioMaxCachedAttachments)
+	case vk.VideoType:
+		videoMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentVideoMaxCachedAttachments), 10, 32)
+		if err != nil {
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+				"struct": "MediaContentCourier",
+				"func":   "getMaxCachedAttachments",
+				"type":   vk.VideoType,
+				"err":    err,
+				"key":    configs.ContentAudioMaxCachedAttachments.Key,
+			}).Fatal("parsing of env variable is failed")
+		}
+
+		return int(videoMaxCachedAttachments)
 	}
 
 	return 0
@@ -213,6 +226,19 @@ func (courier *MediaContentCourier) getCacheRefreshThreshold(mediaType vk.Attach
 		}
 
 		return float32(audioCacheRefreshThreshold)
+	case vk.VideoType:
+		videoCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault(configs.ContentVideoCacheRefreshThreshold), 32)
+		if err != nil {
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+				"struct": "MediaContentCourier",
+				"func":   "getCacheRefreshThreshold",
+				"type":   vk.VideoType,
+				"err":    err,
+				"key":    configs.ContentAudioCacheRefreshThreshold.Key,
+			}).Fatal("parsing of env variable is failed")
+		}
+
+		return float32(videoCacheRefreshThreshold)
 	}
 
 	return 0
@@ -227,6 +253,8 @@ func (courier *MediaContentCourier) resolveContentID(
 		return mediaContent.Audio.ToAttachment()
 	case vk.PhotoType:
 		return mediaContent.Photo.ToAttachment()
+	case vk.VideoType:
+		return mediaContent.Video.ToAttachment()
 	}
 
 	return ""

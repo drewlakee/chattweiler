@@ -37,7 +37,6 @@ func BuildMessageUsingPersonalizedPhrase(
 	builder.RandomID(rand.Int())
 
 	if phrase == nil {
-		builder.Message("")
 		return builder.Params
 	}
 

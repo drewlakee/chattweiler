@@ -148,13 +148,23 @@ func (collector *CachedRandomAttachmentsContentCollector) fetchContentSequence(
 	var attachments []object.WallWallpostAttachment
 	for _, wallPost := range response.Items {
 		for _, attachment := range wallPost.Attachments {
-			if attachment.Type == string(collector.attachmentsType) && len(attachments) < count {
+			if attachment.Type == string(collector.attachmentsType) &&
+				canShareInChat(collector.attachmentsType, attachment) &&
+				len(attachments) < count {
 				attachments = append(attachments, attachment)
 			}
 		}
 	}
 
 	return attachments
+}
+
+func canShareInChat(attachmentsType vk.AttachmentsType, attachment object.WallWallpostAttachment) bool {
+	switch attachmentsType {
+	case vk.VideoType:
+		return bool(attachment.Video.CanRepost)
+	}
+	return true
 }
 
 func (collector *CachedRandomAttachmentsContentCollector) getRandomVkCommunity(communities []string) string {

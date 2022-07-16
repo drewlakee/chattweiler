@@ -16,4 +16,5 @@ type MediaContentType string
 const (
 	AudioType   MediaContentType = "audio"
 	PictureType MediaContentType = "picture"
+	VideoType   MediaContentType = "video"
 )

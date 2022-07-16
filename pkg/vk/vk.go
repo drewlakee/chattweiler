@@ -20,6 +20,7 @@ type AttachmentsType string
 const (
 	AudioType AttachmentsType = "audio"
 	PhotoType AttachmentsType = "photo"
+	VideoType AttachmentsType = "video"
 	Undefined AttachmentsType = "undefined"
 )
 
