@@ -80,6 +80,7 @@ func (courier *MediaContentCourier) ReceiveAndDeliver() {
 					"func":   "ReceiveAndDeliver",
 					"struct": "MediaContentCourier",
 				}).Warn("collected empty media content ignored")
+				courier.askToRetryRequest(received, user)
 				continue
 			}
 
@@ -114,6 +115,29 @@ func (courier *MediaContentCourier) createNewCollectorForCommand(request *botobj
 		courier.getMaxCachedAttachments(request.GetAttachmentsType()),
 		courier.getCacheRefreshThreshold(request.GetAttachmentsType()),
 	)
+}
+
+func (courier *MediaContentCourier) askToRetryRequest(
+	request *botobject.ContentRequestCommand,
+	user *object.UsersUser,
+) {
+	messageToSend := vk.BuildMessageUsingPersonalizedPhrase(
+		request.Event.PeerID,
+		user,
+		model.RetryType,
+		courier.phrasesRepo.FindAllByType(model.RetryType),
+	)
+
+	if messageToSend["message"] != nil && messageToSend["message"] != "" {
+		_, err := courier.communityVkApi.MessagesSend(messageToSend)
+		if err != nil {
+			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
+				"func":   "deliverContentResponse",
+				"struct": "MediaContentCourier",
+				"err":    err,
+			}).Error("message send error")
+		}
+	}
 }
 
 func (courier *MediaContentCourier) getResponseMessage(

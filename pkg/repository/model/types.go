@@ -8,6 +8,7 @@ const (
 	MembershipWarningType PhraseType = "membership_warning"
 	InfoType              PhraseType = "info"
 	ContentRequestType    PhraseType = "content_request"
+	RetryType             PhraseType = "retry_request"
 )
 
 type MediaContentType string

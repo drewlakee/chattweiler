@@ -285,7 +285,7 @@ func (bot *LongPoolingBot) handleInfoCommand(event *object.ChatEvent) {
 		bot.phrasesRepo.FindAllByType(model.InfoType),
 	)
 
-	if messageToSend["message"] != nil {
+	if messageToSend["message"] != nil && messageToSend["message"] != "" {
 		_, err := bot.vkapi.MessagesSend(messageToSend)
 		if err != nil {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
