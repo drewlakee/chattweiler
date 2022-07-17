@@ -99,9 +99,12 @@ func (courier *MediaContentCourier) deliverContentResponse(
 	_, err := courier.communityVkApi.MessagesSend(messageToSend)
 	if err != nil {
 		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func":   "deliverContentResponse",
-			"struct": "MediaContentCourier",
-			"err":    err,
+			"func":           "deliverContentResponse",
+			"struct":         "MediaContentCourier",
+			"err":            err,
+			"message":        messageToSend["message"],
+			"attachment":     messageToSend["attachment"],
+			"attachmentType": request.GetAttachmentsType(),
 		}).Error("message send error")
 	}
 }
