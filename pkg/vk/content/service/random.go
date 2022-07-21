@@ -152,6 +152,7 @@ func (collector *CachedRandomAttachmentsContentCollector) fetchContentSequence(
 				canShareInChat(collector.attachmentsType, attachment) &&
 				len(attachments) < count {
 				attachments = append(attachments, attachment)
+				break
 			}
 		}
 	}
