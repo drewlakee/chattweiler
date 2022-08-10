@@ -135,7 +135,7 @@ func (checker *Checker) checkChatForNewWarning(members map[int]object.UsersUser,
 				checker.phrasesRepo.FindAllByType(model.MembershipWarningType),
 			)
 
-			if _, messageContainsPhrase := messageToSend["message"]; !messageContainsPhrase {
+			if _, messageContainsPhrase := messageToSend["message"]; messageContainsPhrase {
 				_, err := checker.vkapi.MessagesSend(messageToSend)
 				if err != nil {
 					return err
