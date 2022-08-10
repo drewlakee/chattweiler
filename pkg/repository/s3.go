@@ -432,18 +432,7 @@ func (repo *CsvObjectStorageMembershipWarningRepository) Insert(warning model.Me
 			Key:    &currentKey,
 		})
 
-		if !strings.Contains(err.Error(), "NoSuchKey") {
-			if err != nil {
-				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-					"struct": "CsvObjectStorageMembershipWarningRepository",
-					"func":   "Insert",
-					"err":    err,
-					"bucket": repo.bucket,
-					"key":    currentKey,
-				}).Error("s3 client error")
-				return false
-			}
-
+		if err != nil && !strings.Contains(err.Error(), "NoSuchKey") {
 			warningsToInsert, err = repo.getWarnings(object.Body)
 			if err != nil {
 				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
