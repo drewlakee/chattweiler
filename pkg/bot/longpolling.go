@@ -10,6 +10,7 @@ import (
 	"chattweiler/pkg/vk"
 	"chattweiler/pkg/vk/content/service"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/SevereCloud/vksdk/v2/api"
@@ -169,14 +170,11 @@ func (bot *LongPoolingBot) Serve() {
 
 	infoCommand := utils.GetEnvOrDefault(configs.BotCommandOverrideInfo)
 	bot.vklpwrapper.OnNewMessage(func(event wrapper.NewMessage) {
-		switch event.Text {
-		case infoCommand:
+		if strings.EqualFold(event.Text, infoCommand) {
 			bot.handleInfoCommand(mapper.NewChatEventFromNewMessage(event))
-		default:
-			if contentRequests {
-				if contentCommand := bot.contentCommandRepo.FindByCommand(event.Text); contentCommand != nil {
-					bot.handleContentRequestCommand(mapper.NewContentCommandRequest(contentCommand, event))
-				}
+		} else if contentRequests {
+			if contentCommand := bot.contentCommandRepo.FindByCommand(event.Text); contentCommand != nil {
+				bot.handleContentRequestCommand(mapper.NewContentCommandRequest(contentCommand, event))
 			}
 		}
 	})
