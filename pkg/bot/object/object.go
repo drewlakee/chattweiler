@@ -24,6 +24,8 @@ func (request *ContentRequestCommand) GetAttachmentsType() vk.AttachmentsType {
 		return vk.AudioType
 	case model.VideoType:
 		return vk.VideoType
+	case model.DocumentType:
+		return vk.DocumentType
 	}
 
 	return vk.Undefined

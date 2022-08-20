@@ -60,14 +60,11 @@ func BuildMessageUsingPersonalizedPhrase(
 	}
 
 	if phrase.HasAudioAccompaniment() {
-		if !phrase.NullableVkAudio() {
-			builder.Attachment(phrase.GetVkAudioId())
-		} else {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"func":      "BuildMessageUsingPersonalizedPhrase",
-				"phrase_id": phrase.GetID(),
-			}).Warn("phrase is specified with audio accompaniment but audio ID isn't specified")
-		}
+		builder.Attachment(phrase.GetVkAudioId())
+	}
+
+	if phrase.HasGifAccompaniment() {
+		builder.Attachment(phrase.GetVkGifId())
 	}
 
 	return builder.Params
@@ -97,14 +94,7 @@ func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 	builder.Message(phrase.GetText())
 
 	if phrase.HasAudioAccompaniment() {
-		if !phrase.NullableVkAudio() {
-			builder.Attachment(phrase.GetVkAudioId())
-		} else {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"func":      "BuildMessagePhrase",
-				"phrase_id": phrase.GetID(),
-			}).Warn("phrase is specified with audio accompaniment but audio ID isn't specified")
-		}
+		builder.Attachment(phrase.GetVkAudioId())
 	}
 
 	return builder.Params

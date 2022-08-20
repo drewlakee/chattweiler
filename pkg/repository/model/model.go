@@ -14,19 +14,18 @@ type Phrase interface {
 	UserTemplated() bool
 	HasAudioAccompaniment() bool
 	GetVkAudioId() string
+	HasGifAccompaniment() bool
+	GetVkGifId() string
 	GetText() string
-
-	NullableVkAudio() bool
 }
 
 type PhrasePg struct {
-	PhraseID             int            `db:"phrase_id" csv:"phrase_id"`
-	Weight               int            `db:"weight" csv:"weight"`
-	PhraseType           PhraseType     `db:"phrase_type" csv:"phrase_type"`
-	IsUserTemplated      bool           `db:"is_user_templated" csv:"is_user_templated"`
-	IsAudioAccompaniment bool           `db:"is_audio_accompaniment" csv:"is_audio_accompaniment"`
-	VkAudioId            sql.NullString `db:"vk_audio_id" csv:"vk_audio_id"`
-	Text                 string         `db:"text" csv:"text"`
+	PhraseID   int            `db:"phrase_id"`
+	Weight     int            `db:"weight"`
+	PhraseType PhraseType     `db:"phrase_type"`
+	VkAudioId  sql.NullString `db:"vk_audio_id"`
+	VkGifId    sql.NullString `db:"vk_gif_id"`
+	Text       string         `db:"text"`
 }
 
 func (p PhrasePg) GetID() int {
@@ -42,11 +41,11 @@ func (p PhrasePg) GetPhraseType() PhraseType {
 }
 
 func (p PhrasePg) UserTemplated() bool {
-	return p.IsUserTemplated
+	return strings.Contains(p.Text, "%username%")
 }
 
 func (p PhrasePg) HasAudioAccompaniment() bool {
-	return p.IsAudioAccompaniment
+	return p.VkAudioId.Valid
 }
 
 func (p PhrasePg) GetVkAudioId() string {
@@ -57,18 +56,21 @@ func (p PhrasePg) GetText() string {
 	return p.Text
 }
 
-func (p PhrasePg) NullableVkAudio() bool {
-	return p.VkAudioId.Valid
+func (p PhrasePg) HasGifAccompaniment() bool {
+	return p.VkGifId.Valid
+}
+
+func (p PhrasePg) GetVkGifId() string {
+	return p.VkGifId.String
 }
 
 type PhraseCsv struct {
-	PhraseID             int        `csv:"phrase_id"`
-	Weight               int        `csv:"weight"`
-	PhraseType           PhraseType `csv:"phrase_type"`
-	IsUserTemplated      bool       `csv:"is_user_templated"`
-	IsAudioAccompaniment bool       `csv:"is_audio_accompaniment"`
-	VkAudioId            string     `csv:"vk_audio_id"`
-	Text                 string     `csv:"text"`
+	PhraseID   int        `csv:"phrase_id"`
+	Weight     int        `csv:"weight"`
+	PhraseType PhraseType `csv:"phrase_type"`
+	VkAudioId  string     `csv:"vk_audio_id"`
+	VkGifId    string     `csv:"vk_gif_id"`
+	Text       string     `csv:"text"`
 }
 
 func (p PhraseCsv) GetID() int {
@@ -84,11 +86,12 @@ func (p PhraseCsv) GetPhraseType() PhraseType {
 }
 
 func (p PhraseCsv) UserTemplated() bool {
-	return p.IsUserTemplated
+	return strings.Contains(p.Text, "%username%")
 }
 
 func (p PhraseCsv) HasAudioAccompaniment() bool {
-	return p.IsAudioAccompaniment
+	id := strings.TrimSpace(p.VkAudioId)
+	return id != "" || strings.EqualFold(id, "null")
 }
 
 func (p PhraseCsv) GetVkAudioId() string {
@@ -99,8 +102,13 @@ func (p PhraseCsv) GetText() string {
 	return p.Text
 }
 
-func (p PhraseCsv) NullableVkAudio() bool {
-	return p.VkAudioId == ""
+func (p PhraseCsv) HasGifAccompaniment() bool {
+	id := strings.TrimSpace(p.VkGifId)
+	return id != "" || strings.EqualFold(id, "null")
+}
+
+func (p PhraseCsv) GetVkGifId() string {
+	return p.VkGifId
 }
 
 type MembershipWarning struct {

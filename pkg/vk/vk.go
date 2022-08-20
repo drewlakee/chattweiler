@@ -18,10 +18,11 @@ var packageLogFields = logrus.Fields{
 type AttachmentsType string
 
 const (
-	AudioType AttachmentsType = "audio"
-	PhotoType AttachmentsType = "photo"
-	VideoType AttachmentsType = "video"
-	Undefined AttachmentsType = "undefined"
+	AudioType    AttachmentsType = "audio"
+	PhotoType    AttachmentsType = "photo"
+	VideoType    AttachmentsType = "video"
+	DocumentType AttachmentsType = "doc"
+	Undefined    AttachmentsType = "undefined"
 )
 
 func GetUserInfo(vkapi *api.VK, userID string) (*object.UsersUser, error) {
