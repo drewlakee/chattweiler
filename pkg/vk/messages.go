@@ -59,14 +59,7 @@ func BuildMessageUsingPersonalizedPhrase(
 		builder.Message(fmt.Sprintf("%s, \n\n%s", "@"+user.ScreenName, phrase.GetText()))
 	}
 
-	if phrase.HasAudioAccompaniment() {
-		builder.Attachment(phrase.GetVkAudioId())
-	}
-
-	if phrase.HasGifAccompaniment() {
-		builder.Attachment(phrase.GetVkGifId())
-	}
-
+	appendAttachments(phrase, builder)
 	return builder.Params
 }
 
@@ -91,11 +84,23 @@ func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 		return builder.Params
 	}
 
-	builder.Message(phrase.GetText())
-
-	if phrase.HasAudioAccompaniment() {
-		builder.Attachment(phrase.GetVkAudioId())
-	}
+	appendAttachments(phrase, builder)
 
 	return builder.Params
+}
+
+func appendAttachments(phrase model.Phrase, builder *params.MessagesSendBuilder) {
+	var attachments []string
+
+	if phrase.HasAudioAccompaniment() {
+		attachments = append(attachments, phrase.GetVkAudioId())
+	}
+
+	if phrase.HasGifAccompaniment() {
+		attachments = append(attachments, phrase.GetVkGifId())
+	}
+
+	if len(attachments) != 0 {
+		builder.Attachment(strings.Join(attachments, ","))
+	}
 }
