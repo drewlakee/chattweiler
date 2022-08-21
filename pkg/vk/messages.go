@@ -84,8 +84,8 @@ func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 		return builder.Params
 	}
 
+	builder.Message(phrase.GetText())
 	appendAttachments(phrase, builder)
-
 	return builder.Params
 }
 
