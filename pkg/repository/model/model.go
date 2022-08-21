@@ -91,7 +91,7 @@ func (p PhraseCsv) UserTemplated() bool {
 
 func (p PhraseCsv) HasAudioAccompaniment() bool {
 	id := strings.TrimSpace(p.VkAudioId)
-	return id != "" || strings.EqualFold(id, "null")
+	return id != "" || !strings.EqualFold(id, "null")
 }
 
 func (p PhraseCsv) GetVkAudioId() string {
@@ -104,7 +104,7 @@ func (p PhraseCsv) GetText() string {
 
 func (p PhraseCsv) HasGifAccompaniment() bool {
 	id := strings.TrimSpace(p.VkGifId)
-	return id != "" || strings.EqualFold(id, "null")
+	return id != "" || !strings.EqualFold(id, "null")
 }
 
 func (p PhraseCsv) GetVkGifId() string {
