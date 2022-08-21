@@ -337,6 +337,10 @@ func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []mod
 		}
 
 		relevantWarnings := repo.filterOnlyRelevant(allPreviousWarnings)
+		if len(relevantWarnings) == 0 {
+			return relevantWarnings
+		}
+
 		updatedCsvFile, err := csvutil.Marshal(relevantWarnings)
 		if err != nil {
 			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
