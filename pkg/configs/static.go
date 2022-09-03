@@ -24,14 +24,12 @@ var ContentPictureMaxCachedAttachments = NewOptionalConfig("content.picture.max.
 var ContentPictureCacheRefreshThreshold = NewOptionalConfig("content.picture.cache.refresh.threshold", "0.2")
 var ContentVideoMaxCachedAttachments = NewOptionalConfig("content.video.max.cached.attachments", "100")
 var ContentVideoCacheRefreshThreshold = NewOptionalConfig("content.video.cache.refresh.threshold", "0.2")
-var ContentPictureQueueSize = NewOptionalConfig("content.picture.queue.size", "100")
 
 var BotCommandOverrideInfo = NewOptionalConfig("bot.command.override.info", "info")
 var BotFunctionalityWelcomeNewMembers = NewOptionalConfig("bot.functionality.welcome.new.members", "true")
 var BotFunctionalityGoodbyeMembers = NewOptionalConfig("bot.functionality.goodbye.members", "true")
 var BotFunctionalityMembershipChecking = NewOptionalConfig("bot.functionality.membership.checking", "false")
 var BotFunctionalityContentCommands = NewOptionalConfig("bot.functionality.content.commands", "false")
-var BotLogFile = NewMandatoryConfig("bot.log.file")
 
 var YandexObjectStorageAccessKeyID = NewMandatoryConfig("yandex.object.storage.access.key.id")
 var YandexObjectStorageSecretAccessKey = NewMandatoryConfig("yandex.object.storage.secret.access.key")
