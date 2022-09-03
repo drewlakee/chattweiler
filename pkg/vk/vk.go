@@ -8,12 +8,9 @@ import (
 
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/object"
-	"github.com/sirupsen/logrus"
 )
 
-var packageLogFields = logrus.Fields{
-	"package": "vk",
-}
+var logPackage = "vk"
 
 type AttachmentsType string
 

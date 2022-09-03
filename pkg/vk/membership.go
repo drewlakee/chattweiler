@@ -1,6 +1,7 @@
 package vk
 
 import (
+	"chattweiler/pkg/logging"
 	"chattweiler/pkg/repository"
 	"chattweiler/pkg/repository/model"
 	"strconv"
@@ -9,7 +10,6 @@ import (
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/api/params"
 	"github.com/SevereCloud/vksdk/v2/object"
-	"github.com/sirupsen/logrus"
 )
 
 type Checker struct {
@@ -163,10 +163,7 @@ func (checker *Checker) LoopCheck() {
 			"peer_id": 2000000000 + checker.conversationId,
 		})
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"func": "LoopCheck",
-				"err":  err,
-			}).Error()
+			logging.Log.Error(logPackage, "Checker.LoopCheck", err, "vk api error")
 			successfulCheckAttempt = false
 			continue
 		}
@@ -174,20 +171,14 @@ func (checker *Checker) LoopCheck() {
 		members := filterOnlyCommonMembers(conversationMembers)
 		alreadyForewarnedUsers, err := checker.checkAlreadyRelevantMembershipWarnings(members)
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"func": "LoopCheck",
-				"err":  err,
-			}).Error()
+			logging.Log.Error(logPackage, "Checker.LoopCheck", err, "error occurred during relevant membership warnings fetching")
 			successfulCheckAttempt = false
 			continue
 		}
 
 		err = checker.checkChatForNewWarning(members, alreadyForewarnedUsers)
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"func": "LoopCheck",
-				"err":  err,
-			}).Error()
+			logging.Log.Error(logPackage, "Checker.LoopCheck", err, "error occurred during new membership warnings checking")
 			successfulCheckAttempt = false
 			continue
 		}

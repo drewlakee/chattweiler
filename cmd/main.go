@@ -7,12 +7,9 @@ import (
 	"chattweiler/pkg/utils"
 
 	_ "github.com/lib/pq"
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
-	logrus.SetFormatter(&logrus.JSONFormatter{})
-
 	var createRepositoryType repository.StorageType
 	if utils.GetEnvOrDefault(configs.PgDatasourceString) != "" {
 		createRepositoryType = repository.Postgresql

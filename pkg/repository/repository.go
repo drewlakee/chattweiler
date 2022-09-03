@@ -3,13 +3,9 @@ package repository
 
 import (
 	"chattweiler/pkg/repository/model"
-
-	"github.com/sirupsen/logrus"
 )
 
-var packageLogFields = logrus.Fields{
-	"package": "repository",
-}
+var logPackage = "repository"
 
 type PhraseRepository interface {
 	FindAll() []model.Phrase

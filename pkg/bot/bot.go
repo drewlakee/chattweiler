@@ -3,13 +3,9 @@ package bot
 
 import (
 	"chattweiler/pkg/bot/object"
-
-	"github.com/sirupsen/logrus"
 )
 
-var packageLogFields = logrus.Fields{
-	"package": "bot",
-}
+var logPackage = "bot"
 
 type Bot interface {
 	Serve()

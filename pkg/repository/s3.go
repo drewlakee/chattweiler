@@ -2,6 +2,7 @@ package repository
 
 import (
 	"bytes"
+	"chattweiler/pkg/logging"
 	"chattweiler/pkg/repository/model"
 	"context"
 	"fmt"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/jszwec/csvutil"
-	"github.com/sirupsen/logrus"
 )
 
 func getDateAsString(date time.Time) string {
@@ -88,41 +88,25 @@ func (repo *CsvObjectStorageCachedPhraseRepository) FindAll() []model.Phrase {
 		Key:    &repo.key,
 	})
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CsvObjectStorageCachedPhraseRepository",
-			"func":     "FindAll",
-			"err":      err,
-			"bucket":   repo.bucket,
-			"key":      repo.key,
-			"fallback": "empty list",
-		}).Error("s3 client error")
+		logging.Log.Error(
+			logPackage,
+			"CsvObjectStorageCachedPhraseRepository.FindAll",
+			err,
+			"s3 client error: bucket - %s, key - %s", repo.bucket, repo.key,
+		)
 		return []model.Phrase{}
 	}
 
 	csvFile, err := io.ReadAll(object.Body)
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CsvObjectStorageCachedPhraseRepository",
-			"func":     "FindAll",
-			"err":      err,
-			"bucket":   repo.bucket,
-			"key":      repo.key,
-			"fallback": "empty list",
-		}).Error("csv file reading error")
+		logging.Log.Error(logPackage, "CsvObjectStorageCachedPhraseRepository.FindAll", err, "csv file reading error")
 		return []model.Phrase{}
 	}
 
 	var updatedPhrases []model.PhraseCsv
 	err = csvutil.Unmarshal(csvFile, &updatedPhrases)
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CsvObjectStorageCachedPhraseRepository",
-			"func":     "FindAll",
-			"err":      err,
-			"bucket":   repo.bucket,
-			"key":      repo.key,
-			"fallback": "empty list",
-		}).Error("csv file parsing error")
+		logging.Log.Error(logPackage, "CsvObjectStorageCachedPhraseRepository.FindAll", err, "csv file parsing error")
 		return []model.Phrase{}
 	}
 
@@ -131,12 +115,7 @@ func (repo *CsvObjectStorageCachedPhraseRepository) FindAll() []model.Phrase {
 	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&repo.phrases)), updatedPhrasesPtr)
 
 	repo.lastCacheRefresh = time.Now()
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CsvObjectStorageCachedPhraseRepository",
-		"func":   "FindAll",
-		"bucket": repo.bucket,
-		"key":    repo.key,
-	}).Info("Cache successfully updated for ", time.Now().UnixMilli()-startTime, "ms")
+	logging.Log.Info(logPackage, "CsvObjectStorageCachedPhraseRepository.FindAll", "Cache successfully updated for %d ms", time.Now().UnixMilli()-startTime)
 	return repo.castPhrases(updatedPhrases)
 }
 
@@ -193,41 +172,35 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindAll() []model.Co
 		Key:    &repo.key,
 	})
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CsvObjectStorageCachedContentCommandRepository",
-			"func":     "FindAll",
-			"err":      err,
-			"bucket":   repo.bucket,
-			"key":      repo.key,
-			"fallback": "empty list",
-		}).Error("s3 client error")
+		logging.Log.Error(
+			logPackage,
+			"CsvObjectStorageCachedContentCommandRepository.FindAll",
+			err,
+			"s3 client error: bucket - %s, key - %s", repo.bucket, repo.key,
+		)
 		return []model.ContentCommand{}
 	}
 
 	var updatedContentCommands []model.ContentCommand
 	csvFile, err := io.ReadAll(object.Body)
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CsvObjectStorageCachedContentCommandRepository",
-			"func":     "FindAll",
-			"err":      err,
-			"bucket":   repo.bucket,
-			"key":      repo.key,
-			"fallback": "empty list",
-		}).Error("csv file reading error")
+		logging.Log.Error(
+			logPackage,
+			"CsvObjectStorageCachedContentCommandRepository.FindAll",
+			err,
+			"csv file reading error",
+		)
 		return []model.ContentCommand{}
 	}
 
 	err = csvutil.Unmarshal(csvFile, &updatedContentCommands)
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CsvObjectStorageCachedContentCommandRepository",
-			"func":     "FindAll",
-			"err":      err,
-			"bucket":   repo.bucket,
-			"key":      repo.key,
-			"fallback": "empty list",
-		}).Error("csv file parsing error")
+		logging.Log.Error(
+			logPackage,
+			"CsvObjectStorageCachedContentCommandRepository.FindAll",
+			err,
+			"csv file parsing error",
+		)
 		return []model.ContentCommand{}
 	}
 
@@ -236,12 +209,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindAll() []model.Co
 	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&repo.contentCommands)), updatedPhrasesPtr)
 
 	repo.lastCacheRefresh = time.Now()
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CsvObjectStorageCachedContentCommandRepository",
-		"func":   "FindAll",
-		"bucket": repo.bucket,
-		"key":    repo.key,
-	}).Info("Cache successfully updated for ", time.Now().UnixMilli()-startTime, "ms")
+	logging.Log.Info(logPackage, "CsvObjectStorageCachedContentCommandRepository.FindAll", "Cache successfully updated for %d ms", time.Now().UnixMilli()-startTime)
 	return updatedContentCommands
 }
 
@@ -271,20 +239,14 @@ func NewCsvObjectStorageMembershipWarningRepository(client *s3.Client, bucket st
 func (repo *CsvObjectStorageMembershipWarningRepository) getWarnings(csvFileReader io.ReadCloser) ([]model.MembershipWarning, error) {
 	csvFile, err := io.ReadAll(csvFileReader)
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "CsvObjectStorageMembershipWarningRepository",
-			"func":   "getWarnings",
-		}).Error("csv file reading error")
+		logging.Log.Error(logPackage, "CsvObjectStorageMembershipWarningRepository.getWarnings", err, "csv file reading error")
 		return nil, err
 	}
 
 	var warnings []model.MembershipWarning
 	err = csvutil.Unmarshal(csvFile, &warnings)
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "CsvObjectStorageCachedContentCommandRepository",
-			"func":   "getWarnings",
-		}).Error("csv file parsing error")
+		logging.Log.Error(logPackage, "CsvObjectStorageMembershipWarningRepository.getWarnings", err, "csv file parsing error")
 		return nil, err
 	}
 
@@ -312,27 +274,23 @@ func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []mod
 		})
 
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct":   "CsvObjectStorageMembershipWarningRepository",
-				"func":     "FindAllRelevant",
-				"err":      err,
-				"bucket":   repo.bucket,
-				"key":      previousKey,
-				"fallback": "empty list",
-			}).Error("s3 client error")
+			logging.Log.Error(
+				logPackage,
+				"CsvObjectStorageMembershipWarningRepository.FindAllRelevant",
+				err,
+				"s3 client error: bucket - %s, key - %s", repo.bucket, previousKey,
+			)
 			return []model.MembershipWarning{}
 		}
 
 		allPreviousWarnings, err := repo.getWarnings(object.Body)
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct":   "CsvObjectStorageMembershipWarningRepository",
-				"func":     "FindAllRelevant",
-				"err":      err,
-				"bucket":   repo.bucket,
-				"key":      previousKey,
-				"fallback": "empty list",
-			}).Error("s3 client error")
+			logging.Log.Error(
+				logPackage,
+				"CsvObjectStorageMembershipWarningRepository.FindAllRelevant",
+				err,
+				"s3 client error: bucket - %s, key - %s", repo.bucket, previousKey,
+			)
 			return []model.MembershipWarning{}
 		}
 
@@ -343,14 +301,12 @@ func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []mod
 
 		updatedCsvFile, err := csvutil.Marshal(relevantWarnings)
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct":   "CsvObjectStorageCachedContentCommandRepository",
-				"func":     "FindAllRelevant",
-				"err":      err,
-				"bucket":   repo.bucket,
-				"key":      previousKey,
-				"fallback": "empty list",
-			}).Error("relevant warnings transformation to csv file error")
+			logging.Log.Error(
+				logPackage,
+				"CsvObjectStorageMembershipWarningRepository.FindAllRelevant",
+				err,
+				"relevant warnings transformation to csv file error. bucket - %s, key - %s", repo.bucket, previousKey,
+			)
 			return []model.MembershipWarning{}
 		}
 
@@ -362,24 +318,17 @@ func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []mod
 			Body:   newBody,
 		})
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct":   "CsvObjectStorageCachedContentCommandRepository",
-				"func":     "FindAllRelevant",
-				"err":      err,
-				"bucket":   repo.bucket,
-				"key":      newKey,
-				"fallback": "empty list",
-			}).Error("csv file updating error")
+			logging.Log.Error(
+				logPackage,
+				"CsvObjectStorageMembershipWarningRepository.FindAllRelevant",
+				err,
+				"csv file updating error. bucket - %s, key - %s", repo.bucket, newKey,
+			)
 			return []model.MembershipWarning{}
 		}
 
 		repo.currentDate = now
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "CsvObjectStorageCachedContentCommandRepository",
-			"func":   "FindAllRelevant",
-			"bucket": repo.bucket,
-			"key":    newKey,
-		}).Info("Found for ", time.Now().UnixMilli()-startTime, "ms")
+		logging.Log.Info(logPackage, "CsvObjectStorageMembershipWarningRepository.FindAllRelevant", "found for %d ms", time.Now().UnixMilli()-startTime)
 		return relevantWarnings
 	}
 
@@ -389,37 +338,28 @@ func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []mod
 		Key:    &currentKey,
 	})
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CsvObjectStorageMembershipWarningRepository",
-			"func":     "FindAllRelevant",
-			"err":      err,
-			"bucket":   repo.bucket,
-			"key":      currentKey,
-			"fallback": "empty list",
-		}).Error("s3 client error")
+		logging.Log.Error(
+			logPackage,
+			"CsvObjectStorageMembershipWarningRepository.FindAllRelevant",
+			err,
+			"s3 client error. bucket - %s, key - %s", repo.bucket, currentKey,
+		)
 		return []model.MembershipWarning{}
 	}
 
 	warnings, err := repo.getWarnings(object.Body)
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CsvObjectStorageMembershipWarningRepository",
-			"func":     "FindAllRelevant",
-			"err":      err,
-			"bucket":   repo.bucket,
-			"key":      currentKey,
-			"fallback": "empty list",
-		}).Error("s3 client error")
+		logging.Log.Error(
+			logPackage,
+			"CsvObjectStorageMembershipWarningRepository.FindAllRelevant",
+			err,
+			"s3 client error. bucket - %s, key - %s", repo.bucket, currentKey,
+		)
 		return []model.MembershipWarning{}
 	}
 
 	relevantWarnings := repo.filterOnlyRelevant(warnings)
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CsvObjectStorageMembershipWarningRepository",
-		"func":   "FindAllRelevant",
-		"bucket": repo.bucket,
-		"key":    currentKey,
-	}).Info("Found for ", time.Now().UnixMilli()-startTime, "ms")
+	logging.Log.Info(logPackage, "CsvObjectStorageMembershipWarningRepository.FindAllRelevant", "found for %d ms", time.Now().UnixMilli()-startTime)
 	return relevantWarnings
 }
 
@@ -439,13 +379,12 @@ func (repo *CsvObjectStorageMembershipWarningRepository) Insert(warning model.Me
 		if err != nil && !strings.Contains(err.Error(), "NoSuchKey") {
 			warningsToInsert, err = repo.getWarnings(object.Body)
 			if err != nil {
-				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-					"struct": "CsvObjectStorageMembershipWarningRepository",
-					"func":   "Insert",
-					"err":    err,
-					"bucket": repo.bucket,
-					"key":    currentKey,
-				}).Error("s3 client error")
+				logging.Log.Error(
+					logPackage,
+					"CsvObjectStorageMembershipWarningRepository.Insert",
+					err,
+					"s3 client error: bucket - %s, key - %s", repo.bucket, currentKey,
+				)
 				return false
 			}
 		}
@@ -455,13 +394,12 @@ func (repo *CsvObjectStorageMembershipWarningRepository) Insert(warning model.Me
 	currentKey := getDateAsString(repo.currentDate)
 	updatedCsvFile, err := csvutil.Marshal(warningsToInsert)
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "CsvObjectStorageMembershipWarningRepository",
-			"func":   "Insert",
-			"err":    err,
-			"bucket": repo.bucket,
-			"key":    currentKey,
-		}).Error("relevant warnings transformation to csv file error")
+		logging.Log.Error(
+			logPackage,
+			"CsvObjectStorageMembershipWarningRepository.Insert",
+			err,
+			"relevant warnings transformation to csv file error. bucket - %s, key - %s", repo.bucket, currentKey,
+		)
 		return false
 	}
 
@@ -472,22 +410,16 @@ func (repo *CsvObjectStorageMembershipWarningRepository) Insert(warning model.Me
 		Body:   newBody,
 	})
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "CsvObjectStorageMembershipWarningRepository",
-			"func":   "Insert",
-			"err":    err,
-			"bucket": repo.bucket,
-			"key":    currentKey,
-		}).Error("csv file updating error")
+		logging.Log.Error(
+			logPackage,
+			"CsvObjectStorageMembershipWarningRepository.Insert",
+			err,
+			"s3 client error. bucket - %s, key - %s", repo.bucket, currentKey,
+		)
 		return false
 	}
 
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CsvObjectStorageMembershipWarningRepository",
-		"func":   "Insert",
-		"bucket": repo.bucket,
-		"key":    currentKey,
-	}).Info("Inserted for ", time.Now().UnixMilli()-startTime, "ms")
+	logging.Log.Info(logPackage, "CsvObjectStorageMembershipWarningRepository.Insert", "inserted for %d ms", time.Now().UnixMilli()-startTime)
 	return true
 }
 
@@ -510,25 +442,23 @@ func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToIrrelevant(w
 			Key:    &currentKey,
 		})
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct": "CsvObjectStorageMembershipWarningRepository",
-				"func":   "UpdateAllToIrrelevant",
-				"err":    err,
-				"bucket": repo.bucket,
-				"key":    currentKey,
-			}).Error("s3 client error")
+			logging.Log.Error(
+				logPackage,
+				"CsvObjectStorageMembershipWarningRepository.UpdateAllToIrrelevant",
+				err,
+				"s3 client error. bucket - %s, key - %s", repo.bucket, currentKey,
+			)
 			return false
 		}
 
 		warningsToUpdateArray, err = repo.getWarnings(object.Body)
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct": "CsvObjectStorageMembershipWarningRepository",
-				"func":   "UpdateAllToIrrelevant",
-				"err":    err,
-				"bucket": repo.bucket,
-				"key":    currentKey,
-			}).Error("s3 client error")
+			logging.Log.Error(
+				logPackage,
+				"CsvObjectStorageMembershipWarningRepository.UpdateAllToIrrelevant",
+				err,
+				"s3 client error. bucket - %s, key - %s", repo.bucket, currentKey,
+			)
 			return false
 		}
 	}
@@ -542,13 +472,12 @@ func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToIrrelevant(w
 	currentKey := getDateAsString(repo.currentDate)
 	updatedCsvFile, err := csvutil.Marshal(warningsToUpdateArray)
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "CsvObjectStorageMembershipWarningRepository",
-			"func":   "UpdateAllToIrrelevant",
-			"err":    err,
-			"bucket": repo.bucket,
-			"key":    currentKey,
-		}).Error("relevant warnings transformation to csv file error")
+		logging.Log.Error(
+			logPackage,
+			"CsvObjectStorageMembershipWarningRepository.UpdateAllToIrrelevant",
+			err,
+			"relevant warnings transformation to csv file error. bucket - %s, key - %s", repo.bucket, currentKey,
+		)
 		return false
 	}
 
@@ -559,21 +488,15 @@ func (repo *CsvObjectStorageMembershipWarningRepository) UpdateAllToIrrelevant(w
 		Body:   newBody,
 	})
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "CsvObjectStorageMembershipWarningRepository",
-			"func":   "UpdateAllToIrrelevant",
-			"err":    err,
-			"bucket": repo.bucket,
-			"key":    currentKey,
-		}).Error("csv file updating error")
+		logging.Log.Error(
+			logPackage,
+			"CsvObjectStorageMembershipWarningRepository.UpdateAllToIrrelevant",
+			err,
+			"csv file updating error",
+		)
 		return false
 	}
 
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CsvObjectStorageMembershipWarningRepository",
-		"func":   "UpdateAllToIrrelevant",
-		"bucket": repo.bucket,
-		"key":    currentKey,
-	}).Info("Updated for ", time.Now().UnixMilli()-startTime, "ms")
+	logging.Log.Info(logPackage, "CsvObjectStorageMembershipWarningRepository.UpdateAllToIrrelevant", "updated for %d ms", time.Now().UnixMilli()-startTime)
 	return true
 }

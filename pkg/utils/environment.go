@@ -4,15 +4,10 @@ package utils
 
 import (
 	"chattweiler/pkg/configs"
+	"fmt"
 	"os"
 	"strings"
-
-	"github.com/sirupsen/logrus"
 )
-
-var packageLogFields = logrus.Fields{
-	"package": "utils",
-}
 
 func iterateOverAllPossibleKeys(key string) string {
 	value := os.Getenv(key)
@@ -40,10 +35,7 @@ func GetEnvOrDefault(config configs.ApplicationConfig) string {
 func MustGetEnv(config configs.ApplicationConfig) string {
 	value := iterateOverAllPossibleKeys(config.GetKey())
 	if len(value) == 0 {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "MustGetEnv",
-			"key":  config.GetKey(),
-		}).Fatal("Couldn't get environment variable's value because there is no such variable")
+		panic(fmt.Sprintf("%s: variable must be specified", config.GetKey()))
 	}
 	return value
 }

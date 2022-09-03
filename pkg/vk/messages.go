@@ -2,6 +2,7 @@ package vk
 
 import (
 	"chattweiler/pkg/configs"
+	"chattweiler/pkg/logging"
 	"chattweiler/pkg/repository/model"
 	"chattweiler/pkg/roulette"
 	"chattweiler/pkg/utils"
@@ -13,7 +14,6 @@ import (
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/api/params"
 	"github.com/SevereCloud/vksdk/v2/object"
-	"github.com/sirupsen/logrus"
 )
 
 func BuildMessageUsingPersonalizedPhrase(
@@ -25,10 +25,7 @@ func BuildMessageUsingPersonalizedPhrase(
 	phrase := roulette.Spin(phrases...)
 	if phrase == nil {
 		if suppress, _ := strconv.ParseBool(utils.GetEnvOrDefault(configs.PhrasesSuppressLogsMissedPhrases)); !suppress {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"func":       "BuildMessageUsingPersonalizedPhrase",
-				"phraseType": phrasesType,
-			}).Warn("were passed empty phrases, but response message supposed to be with a phrase")
+			logging.Log.Warn(logPackage, "BuildMessageUsingPersonalizedPhrase", "%s: were passed empty phrases, but response message supposed to be with a phrase", phrasesType)
 		}
 	}
 
@@ -43,10 +40,7 @@ func BuildMessageUsingPersonalizedPhrase(
 
 	useFirstNameInsteadUsername, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.ChatUseFirstNameInsteadUsername))
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "BuildMessageUsingPersonalizedPhrase",
-			"key":  configs.ChatUseFirstNameInsteadUsername.Key,
-		}).Error("parsing of env variable is failed")
+		logging.Log.Error(logPackage, "BuildMessageUsingPersonalizedPhrase", err, "%s: parsing of env variable is failed", configs.ChatUseFirstNameInsteadUsername.Key)
 	}
 
 	if phrase.UserTemplated() {
@@ -68,10 +62,7 @@ func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
 
 	if phrase == nil {
 		if suppress, _ := strconv.ParseBool(utils.GetEnvOrDefault(configs.PhrasesSuppressLogsMissedPhrases)); !suppress {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"func":     "BuildMessagePhrase",
-				"fallback": "empty api params",
-			}).Warn("empty phrases were passed")
+			logging.Log.Warn(logPackage, "BuildMessagePhrase", "empty phrases were passed")
 		}
 	}
 

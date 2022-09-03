@@ -1,7 +1,9 @@
 package repository
 
 import (
+	"chattweiler/pkg/logging"
 	"chattweiler/pkg/repository/model"
+	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -9,7 +11,6 @@ import (
 	"unsafe"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/sirupsen/logrus"
 )
 
 type CachedPgPhraseRepository struct {
@@ -39,10 +40,7 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) castPhrases(phrases []
 
 func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phrase {
 	startTime := time.Now().UnixMilli()
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CachedPgPhraseRepository",
-		"func":   "FindAll",
-	}).Info("Updating phrases cache...")
+	logging.Log.Info(logPackage, "CachedPgPhraseRepository.FindAll", "Updating phrases cache...")
 	if time.Now().Before(cachedPgPhraseRepository.lastCacheRefresh.Add(cachedPgPhraseRepository.cacheRefreshInterval)) {
 		// atomic phrases read
 		phrasesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&cachedPgPhraseRepository.phrases)))
@@ -66,13 +64,7 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phra
 	var updatedPhrases []model.PhrasePg
 	err := cachedPgPhraseRepository.db.Select(&updatedPhrases, query)
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CachedPgPhraseRepository",
-			"func":     "FindAll",
-			"err":      err,
-			"query":    query,
-			"fallback": "empty list",
-		}).Error()
+		logging.Log.Error(logPackage, "CachedPgPhraseRepository.FindAll", err, "Select error. query - %s", query)
 		return []model.Phrase{}
 	}
 
@@ -81,10 +73,7 @@ func (cachedPgPhraseRepository *CachedPgPhraseRepository) FindAll() []model.Phra
 	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&cachedPgPhraseRepository.phrases)), updatedPhrasesPtr)
 
 	cachedPgPhraseRepository.lastCacheRefresh = time.Now()
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CachedPgPhraseRepository",
-		"func":   "FindAll",
-	}).Info("Phrases cache successfully updated for ", time.Now().UnixMilli()-startTime, "ms")
+	logging.Log.Info(logPackage, "FindAll", fmt.Sprintf("Phrases cache successfully updated for %d ms", time.Now().UnixMilli()-startTime))
 	return cachedPgPhraseRepository.castPhrases(updatedPhrases)
 }
 
@@ -121,13 +110,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) Insert(warni
 	)
 
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "PgMembershipWarningRepository",
-			"func":   "Insert",
-			"err":    err,
-			"query":  insert,
-			"params": warning,
-		}).Error()
+		logging.Log.Error(logPackage, "PgMembershipWarningRepository.Insert", err, "Insert error. query - %s, params - %v", insert, warning)
 		return false
 	}
 
@@ -142,25 +125,14 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToI
 
 	tx, err := pgMembershipWarningRepository.db.Begin()
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "PgMembershipWarningRepository",
-			"func":   "UpdateAllToIrrelevant",
-			"err":    err,
-			"query":  update,
-		}).Error()
+		logging.Log.Error(logPackage, "PgMembershipWarningRepository.UpdateAllToIrrelevant", err, "Update error. query - %s", update)
 		return false
 	}
 
 	for _, warning := range warnings {
 		_, err := tx.Exec(update, warning.WarningID)
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct": "PgMembershipWarningRepository",
-				"func":   "UpdateAllToIrrelevant",
-				"err":    err,
-				"query":  update,
-				"param":  warning,
-			}).Error()
+			logging.Log.Error(logPackage, "PgMembershipWarningRepository.UpdateAllToIrrelevant", err, "Update error. query - %s, params - %v", update, warning)
 			tx.Rollback()
 			return false
 		}
@@ -168,12 +140,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) UpdateAllToI
 
 	err = tx.Commit()
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct": "PgMembershipWarningRepository",
-			"func":   "UpdateAllToIrrelevant",
-			"err":    err,
-			"query":  update,
-		}).Error()
+		logging.Log.Error(logPackage, "PgMembershipWarningRepository.UpdateAllToIrrelevant", err, "Update error. query - %s", update)
 		tx.Rollback()
 		return false
 	}
@@ -190,13 +157,7 @@ func (pgMembershipWarningRepository *PgMembershipWarningRepository) FindAllRelev
 	var warnings []model.MembershipWarning
 	err := pgMembershipWarningRepository.db.Select(&warnings, query)
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "PgMembershipWarningRepository",
-			"func":     "FindAllRelevant",
-			"err":      err,
-			"query":    query,
-			"fallback": "empty list",
-		}).Error()
+		logging.Log.Error(logPackage, "PgMembershipWarningRepository.FindAllRelevant", err, "Select error. query - %s", query)
 		return []model.MembershipWarning{}
 	}
 
@@ -222,10 +183,7 @@ func NewCachedPgContentSourceRepository(db *sqlx.DB, cacheRefreshInterval time.D
 
 func (repo *CachedPgContentCommandRepository) FindAll() []model.ContentCommand {
 	startTime := time.Now().UnixMilli()
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CachedPgContentCommandRepository",
-		"func":   "FindAll",
-	}).Info("Updating content commands cache...")
+	logging.Log.Info(logPackage, "CachedPgContentCommandRepository.FindAll", "Updating content commands cache...")
 	if time.Now().Before(repo.lastCacheRefresh.Add(repo.cacheRefreshInterval)) {
 		// atomic content sources read
 		contentSourcesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&repo.contentSources)))
@@ -249,13 +207,7 @@ func (repo *CachedPgContentCommandRepository) FindAll() []model.ContentCommand {
 	var updatedContentSources []model.ContentCommand
 	err := repo.db.Select(&updatedContentSources, query)
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CachedPgContentCommandRepository",
-			"func":     "FindAll",
-			"err":      err,
-			"query":    query,
-			"fallback": "empty list",
-		}).Error()
+		logging.Log.Info(logPackage, "CachedPgContentCommandRepository.FindAll", "Select error. query - %s", query)
 		return []model.ContentCommand{}
 	}
 
@@ -264,10 +216,7 @@ func (repo *CachedPgContentCommandRepository) FindAll() []model.ContentCommand {
 	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&repo.contentSources)), updatedUpdatedContentSourcesPtr)
 
 	repo.lastCacheRefresh = time.Now()
-	logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-		"struct": "CachedPgContentCommandRepository",
-		"func":   "FindAll",
-	}).Info("Content commands cache successfully updated for ", time.Now().UnixMilli()-startTime, "ms")
+	logging.Log.Info(logPackage, "CachedPgContentCommandRepository.FindAll", "Content commands cache successfully updated for %d ms", time.Now().UnixMilli()-startTime)
 	return updatedContentSources
 }
 

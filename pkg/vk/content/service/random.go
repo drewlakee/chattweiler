@@ -1,6 +1,7 @@
 package service
 
 import (
+	"chattweiler/pkg/logging"
 	"chattweiler/pkg/repository"
 	"chattweiler/pkg/utils"
 	"chattweiler/pkg/vk"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/object"
-	"github.com/sirupsen/logrus"
 )
 
 type CachedRandomAttachmentsContentCollector struct {
@@ -51,11 +51,7 @@ func (collector *CachedRandomAttachmentsContentCollector) CollectOne() object.Wa
 	if len(collector.cachedAttachments) <= threshold {
 		collector.refreshCacheDifference()
 		if len(collector.cachedAttachments) == 0 {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct":   "CachedRandomAttachmentsContentCollector",
-				"func":     "CollectOne",
-				"fallback": "empty wall post attachment",
-			}).Warn()
+			logging.Log.Warn(logPackage, "CachedRandomAttachmentsContentCollector.CollectOne", "empty attachments. attachmentsType=%s, contentCommand=%s", collector.attachmentsType, collector.contentCommand)
 			return object.WallWallpostAttachment{}
 		}
 	}
@@ -136,12 +132,7 @@ func (collector *CachedRandomAttachmentsContentCollector) fetchContentSequence(
 	})
 
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CachedRandomAttachmentsContentCollector",
-			"func":     "fetchContentSequence",
-			"err":      err,
-			"fallback": "empty content sequence",
-		}).Error()
+		logging.Log.Error(logPackage, "CachedRandomAttachmentsContentCollector.fetchContentSequence", err, "empty content sequence")
 		return []object.WallWallpostAttachment{}
 	}
 
@@ -180,12 +171,7 @@ func (collector *CachedRandomAttachmentsContentCollector) getWallPostsCount(comm
 	})
 
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"struct":   "CachedRandomAttachmentsContentCollector",
-			"func":     "getWallPostsCount",
-			"err":      err,
-			"fallback": "0",
-		}).Error()
+		logging.Log.Error(logPackage, "CachedRandomAttachmentsContentCollector.getWallPostsCount", err, "vk api error")
 	}
 
 	return response.Count

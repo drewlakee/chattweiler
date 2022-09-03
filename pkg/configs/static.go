@@ -31,6 +31,7 @@ var BotFunctionalityWelcomeNewMembers = NewOptionalConfig("bot.functionality.wel
 var BotFunctionalityGoodbyeMembers = NewOptionalConfig("bot.functionality.goodbye.members", "true")
 var BotFunctionalityMembershipChecking = NewOptionalConfig("bot.functionality.membership.checking", "false")
 var BotFunctionalityContentCommands = NewOptionalConfig("bot.functionality.content.commands", "false")
+var BotLogFile = NewMandatoryConfig("bot.log.file")
 
 var YandexObjectStorageAccessKeyID = NewMandatoryConfig("yandex.object.storage.access.key.id")
 var YandexObjectStorageSecretAccessKey = NewMandatoryConfig("yandex.object.storage.secret.access.key")

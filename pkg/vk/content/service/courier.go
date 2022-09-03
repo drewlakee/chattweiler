@@ -3,6 +3,7 @@ package service
 import (
 	botobject "chattweiler/pkg/bot/object"
 	"chattweiler/pkg/configs"
+	"chattweiler/pkg/logging"
 	"chattweiler/pkg/repository"
 	"chattweiler/pkg/repository/model"
 	"chattweiler/pkg/utils"
@@ -13,12 +14,9 @@ import (
 
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/object"
-	"github.com/sirupsen/logrus"
 )
 
-var packageLogFields = logrus.Fields{
-	"package": "service",
-}
+var logPackage = "service"
 
 type MediaContentCourier struct {
 	communityVkApi          *api.VK
@@ -57,12 +55,7 @@ func (courier *MediaContentCourier) ReceiveAndDeliver() {
 		case received := <-courier.listeningChannel:
 			user, err := vk.GetUserInfo(courier.communityVkApi, received.Event.UserID)
 			if err != nil {
-				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-					"struct": "MediaContentCourier",
-					"func":   "ReceiveAndDeliver",
-					"err":    err,
-					"user":   received.Event.UserID,
-				}).Error("get user info error")
+				logging.Log.Error(logPackage, "MediaContentCourier.ReceiveAndDeliver", err, "%s: get user info error", received.Event.UserID)
 				continue
 			}
 
@@ -76,10 +69,7 @@ func (courier *MediaContentCourier) ReceiveAndDeliver() {
 
 			mediaContent := courier.commandCollectors[received.Command.Name].CollectOne()
 			if len(mediaContent.Type) == 0 {
-				logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-					"func":   "ReceiveAndDeliver",
-					"struct": "MediaContentCourier",
-				}).Warn("collected empty media content ignored")
+				logging.Log.Warn(logPackage, "MediaContentCourier.ReceiveAndDeliver", "collected empty media content ignored")
 				courier.askToRetryRequest(received, user)
 				continue
 			}
@@ -98,14 +88,7 @@ func (courier *MediaContentCourier) deliverContentResponse(
 	messageToSend["attachment"] = courier.resolveContentID(mediaContent, request.GetAttachmentsType())
 	_, err := courier.communityVkApi.MessagesSend(messageToSend)
 	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func":           "deliverContentResponse",
-			"struct":         "MediaContentCourier",
-			"err":            err,
-			"message":        messageToSend["message"],
-			"attachment":     messageToSend["attachment"],
-			"attachmentType": request.GetAttachmentsType(),
-		}).Error("message send error")
+		logging.Log.Error(logPackage, "MediaContentCourier.deliverContentResponse", err, "message sending error")
 	}
 }
 
@@ -134,11 +117,7 @@ func (courier *MediaContentCourier) askToRetryRequest(
 	if messageToSend["message"] != nil {
 		_, err := courier.communityVkApi.MessagesSend(messageToSend)
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"func":   "deliverContentResponse",
-				"struct": "MediaContentCourier",
-				"err":    err,
-			}).Error("message send error")
+			logging.Log.Error(logPackage, "MediaContentCourier.askToRetryRequest", err, "message sending error")
 		}
 	}
 }
@@ -160,39 +139,21 @@ func (courier *MediaContentCourier) getMaxCachedAttachments(mediaType vk.Attachm
 	case vk.PhotoType:
 		pictureMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentPictureMaxCachedAttachments), 10, 32)
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct": "MediaContentCourier",
-				"func":   "getMaxCachedAttachments",
-				"type":   vk.PhotoType,
-				"err":    err,
-				"key":    configs.ContentPictureMaxCachedAttachments.Key,
-			}).Fatal("parsing of env variable is failed")
+			logging.Log.Panic(logPackage, "MediaContentCourier.getMaxCachedAttachments", err, "%s: parsing of env variable is failed", configs.ContentPictureMaxCachedAttachments.Key)
 		}
 
 		return int(pictureMaxCachedAttachments)
 	case vk.AudioType:
 		audioMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentAudioMaxCachedAttachments), 10, 32)
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct": "MediaContentCourier",
-				"func":   "getMaxCachedAttachments",
-				"type":   vk.AudioType,
-				"err":    err,
-				"key":    configs.ContentAudioMaxCachedAttachments.Key,
-			}).Fatal("parsing of env variable is failed")
+			logging.Log.Panic(logPackage, "MediaContentCourier.getMaxCachedAttachments", err, "%s: parsing of env variable is failed", configs.ContentAudioMaxCachedAttachments.Key)
 		}
 
 		return int(audioMaxCachedAttachments)
 	case vk.VideoType:
 		videoMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentVideoMaxCachedAttachments), 10, 32)
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct": "MediaContentCourier",
-				"func":   "getMaxCachedAttachments",
-				"type":   vk.VideoType,
-				"err":    err,
-				"key":    configs.ContentAudioMaxCachedAttachments.Key,
-			}).Fatal("parsing of env variable is failed")
+			logging.Log.Panic(logPackage, "MediaContentCourier.getMaxCachedAttachments", err, "%s: parsing of env variable is failed", configs.ContentVideoMaxCachedAttachments.Key)
 		}
 
 		return int(videoMaxCachedAttachments)
@@ -206,39 +167,21 @@ func (courier *MediaContentCourier) getCacheRefreshThreshold(mediaType vk.Attach
 	case vk.PhotoType:
 		pictureCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault(configs.ContentPictureCacheRefreshThreshold), 32)
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct": "MediaContentCourier",
-				"func":   "getCacheRefreshThreshold",
-				"type":   vk.PhotoType,
-				"err":    err,
-				"key":    configs.ContentPictureCacheRefreshThreshold.Key,
-			}).Fatal("parsing of env variable is failed")
+			logging.Log.Panic(logPackage, "MediaContentCourier.getCacheRefreshThreshold", err, "%s: parsing of env variable is failed", configs.ContentPictureCacheRefreshThreshold.Key)
 		}
 
 		return float32(pictureCacheRefreshThreshold)
 	case vk.AudioType:
 		audioCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault(configs.ContentAudioCacheRefreshThreshold), 32)
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct": "MediaContentCourier",
-				"func":   "getCacheRefreshThreshold",
-				"type":   vk.AudioType,
-				"err":    err,
-				"key":    configs.ContentAudioCacheRefreshThreshold.Key,
-			}).Fatal("parsing of env variable is failed")
+			logging.Log.Panic(logPackage, "MediaContentCourier.getCacheRefreshThreshold", err, "%s: parsing of env variable is failed", configs.ContentAudioCacheRefreshThreshold.Key)
 		}
 
 		return float32(audioCacheRefreshThreshold)
 	case vk.VideoType:
 		videoCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault(configs.ContentVideoCacheRefreshThreshold), 32)
 		if err != nil {
-			logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-				"struct": "MediaContentCourier",
-				"func":   "getCacheRefreshThreshold",
-				"type":   vk.VideoType,
-				"err":    err,
-				"key":    configs.ContentAudioCacheRefreshThreshold.Key,
-			}).Fatal("parsing of env variable is failed")
+			logging.Log.Panic(logPackage, "MediaContentCourier.getCacheRefreshThreshold", err, "%s: parsing of env variable is failed", configs.ContentAudioCacheRefreshThreshold.Key)
 		}
 
 		return float32(videoCacheRefreshThreshold)
