@@ -1,10 +1,12 @@
 package logging
 
 import (
+	"chattweiler/pkg/configs"
+	"chattweiler/pkg/utils"
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"io"
 	"os"
+	"strconv"
 )
 
 var Log = NewEdgeLogger()
@@ -17,15 +19,27 @@ func NewEdgeLogger() *EdgeLogger {
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.JSONFormatter{})
 
-	filename := "chattweiler.log"
-	_ = os.Remove(filename)
-	outputFile, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
-
+	logToFile, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.BotLogToFile))
 	if err != nil {
 		panic(err)
 	}
 
-	logger.SetOutput(io.MultiWriter(os.Stderr, outputFile))
+	if logToFile {
+		_ = os.Remove("logs")
+		err = os.Mkdir("logs", 0755)
+		filename := "logs/chattweiler.log"
+		_ = os.Remove(filename)
+		outputFile, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+
+		if err != nil {
+			panic(err)
+		}
+
+		logger.SetOutput(outputFile)
+	} else {
+		logger.SetOutput(os.Stdout)
+	}
+
 	return &EdgeLogger{logger}
 }
 
