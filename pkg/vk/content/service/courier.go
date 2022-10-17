@@ -117,7 +117,7 @@ func (courier *MediaContentCourier) askToRetryRequest(
 ) {
 	phrases := courier.phrasesRepo.FindAllByType(model.RetryType)
 	if len(phrases) == 0 {
-		logging.Log.Warn(logPackage, "MediaContentCourier.askToRetryRequest", "there's no ask retry phrases, message won't be sent", user.ScreenName)
+		logging.Log.Warn(logPackage, "MediaContentCourier.askToRetryRequest", "there's no ask retry phrases, message won't be sent")
 		return
 	}
 
@@ -207,7 +207,7 @@ func (courier *MediaContentCourier) removeGarbageCollectors() {
 		relevantCommandsMap[command.ID] = true
 	}
 
-	for commandID, _ := range courier.commandCollectors {
+	for commandID := range courier.commandCollectors {
 		if _, exist := relevantCommandsMap[commandID]; !exist {
 			delete(courier.commandCollectors, commandID)
 		}

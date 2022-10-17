@@ -33,11 +33,6 @@ func BuildMessageUsingPersonalizedPhrase(
 	builder.PeerID(peerId)
 	builder.RandomID(rand.Int())
 
-	if phrase == nil {
-		builder.Message(" ")
-		return builder.Params
-	}
-
 	useFirstNameInsteadUsername, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.ChatUseFirstNameInsteadUsername))
 	if err != nil {
 		logging.Log.Error(logPackage, "BuildMessageUsingPersonalizedPhrase", err, "%s: parsing of env variable is failed", configs.ChatUseFirstNameInsteadUsername.Key)
@@ -57,24 +52,11 @@ func BuildMessageUsingPersonalizedPhrase(
 	return builder.Params
 }
 
-func BuildMessagePhrase(peerId int, phrases []model.Phrase) api.Params {
+func BuildMessageWithRandomPhrase(peerId int, phrases []model.Phrase) api.Params {
 	phrase := roulette.Spin(phrases...)
-
-	if phrase == nil {
-		if suppress, _ := strconv.ParseBool(utils.GetEnvOrDefault(configs.PhrasesSuppressLogsMissedPhrases)); !suppress {
-			logging.Log.Warn(logPackage, "BuildMessagePhrase", "empty phrases were passed")
-		}
-	}
-
 	builder := params.NewMessagesSendBuilder()
 	builder.PeerID(peerId)
 	builder.RandomID(0)
-
-	if phrase == nil {
-		builder.Message("")
-		return builder.Params
-	}
-
 	builder.Message(phrase.GetText())
 	appendAttachments(phrase, builder)
 	return builder.Params

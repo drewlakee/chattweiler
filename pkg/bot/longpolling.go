@@ -153,7 +153,7 @@ func (bot *LongPoolingBot) handleChatUserJoinEvent(event *object.ChatEvent) {
 	logging.Log.Info(logPackage, "LongPoolingBot.handleChatUserJoinEvent", "'%s' user is joined", user.ScreenName)
 	phrases := bot.phrasesRepo.FindAllByType(model.WelcomeType)
 	if len(phrases) == 0 {
-		logging.Log.Warn(logPackage, "LongPoolingBot.handleChatUserJoinEvent", "there's no welcome phrases, message won't be sent", user.ScreenName)
+		logging.Log.Warn(logPackage, "LongPoolingBot.handleChatUserJoinEvent", "there's no welcome phrases, message won't be sent")
 		return
 	}
 
@@ -174,7 +174,7 @@ func (bot *LongPoolingBot) handleChatUserLeavingEvent(event *object.ChatEvent) {
 	logging.Log.Info(logPackage, "LongPoolingBot.handleChatUserLeavingEvent", "'%s' user is gone", user.ScreenName)
 	phrases := bot.phrasesRepo.FindAllByType(model.GoodbyeType)
 	if len(phrases) == 0 {
-		logging.Log.Warn(logPackage, "LongPoolingBot.handleChatUserJoinEvent", "there's no goodbye phrases, message won't be sent", user.ScreenName)
+		logging.Log.Warn(logPackage, "LongPoolingBot.handleChatUserJoinEvent", "there's no goodbye phrases, message won't be sent")
 		return
 	}
 
@@ -186,16 +186,16 @@ func (bot *LongPoolingBot) handleChatUserLeavingEvent(event *object.ChatEvent) {
 }
 
 func (bot *LongPoolingBot) handleInfoCommand(event *object.ChatEvent) {
-	messageToSend := vk.BuildMessagePhrase(
-		event.PeerID,
-		bot.phrasesRepo.FindAllByType(model.InfoType),
-	)
+	phrases := bot.phrasesRepo.FindAllByType(model.InfoType)
+	if len(phrases) == 0 {
+		logging.Log.Warn(logPackage, "LongPoolingBot.handleInfoCommand", "there's no info phrases, message won't be sent")
+		return
+	}
 
-	if messageToSend["message"] != nil && messageToSend["message"] != "" {
-		_, err := bot.vkapi.MessagesSend(messageToSend)
-		if err != nil {
-			logging.Log.Error(logPackage, "LongPoolingBot.handleInfoCommand", err, "message sending error")
-		}
+	messageToSend := vk.BuildMessageWithRandomPhrase(event.PeerID, phrases)
+	_, err := bot.vkapi.MessagesSend(messageToSend)
+	if err != nil {
+		logging.Log.Error(logPackage, "LongPoolingBot.handleInfoCommand", err, "message sending error")
 	}
 }
 
