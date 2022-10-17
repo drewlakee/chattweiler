@@ -122,11 +122,24 @@ type MembershipWarning struct {
 
 type ContentCommand struct {
 	ID               int              `db:"id" csv:"id"`
-	Name             string           `db:"name" csv:"name"`
+	command          string           `db:"command" csv:"command"`
 	MediaContentType MediaContentType `db:"media_type" csv:"media_type"`
-	VkCommunityIDs   string           `db:"community_ids" csv:"community_ids"`
+	vkCommunityID    string           `db:"community_id" csv:"community_id"`
 }
 
-func (contentCommand *ContentCommand) GetSeparatedCommunityIDs() []string {
-	return strings.Split(contentCommand.VkCommunityIDs, ",")
+func (contentCommand *ContentCommand) GetCommunityIDs() []string {
+	return strings.Split(contentCommand.vkCommunityID, ",")
+}
+
+func (contentCommand ContentCommand) GetAliases() []string {
+	return strings.Split(contentCommand.command, ",")
+}
+
+func (contentCommand ContentCommand) ContainsAlias(alias string) bool {
+	for _, existingAlias := range contentCommand.GetAliases() {
+		if strings.EqualFold(existingAlias, alias) {
+			return true
+		}
+	}
+	return false
 }

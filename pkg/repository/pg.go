@@ -4,7 +4,6 @@ import (
 	"chattweiler/pkg/logging"
 	"chattweiler/pkg/repository/model"
 	"fmt"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -220,9 +219,18 @@ func (repo *CachedPgContentCommandRepository) FindAll() []model.ContentCommand {
 	return updatedContentSources
 }
 
-func (repo *CachedPgContentCommandRepository) FindByCommand(commandName string) *model.ContentCommand {
+func (repo *CachedPgContentCommandRepository) FindByCommandAlias(command string) *model.ContentCommand {
 	for _, contentCommand := range repo.FindAll() {
-		if strings.EqualFold(commandName, contentCommand.Name) {
+		if contentCommand.ContainsAlias(command) {
+			return &contentCommand
+		}
+	}
+	return nil
+}
+
+func (repo *CachedPgContentCommandRepository) FindById(ID int) *model.ContentCommand {
+	for _, contentCommand := range repo.FindAll() {
+		if contentCommand.ID == ID {
 			return &contentCommand
 		}
 	}

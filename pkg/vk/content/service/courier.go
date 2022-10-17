@@ -24,7 +24,7 @@ type MediaContentCourier struct {
 	phrasesRepo             repository.PhraseRepository
 	contentCommandRepo      repository.ContentCommandRepository
 	listeningChannel        chan *botobject.ContentRequestCommand
-	commandCollectors       map[string]content.AttachmentsContentCollector
+	commandCollectors       map[int]content.AttachmentsContentCollector
 	garbageCleaningInterval time.Duration
 	lastTsGarbageCollected  time.Time
 }
@@ -43,7 +43,7 @@ func NewMediaContentCourier(
 		phrasesRepo:             phrasesRepo,
 		contentCommandRepo:      contentCommandRepo,
 		listeningChannel:        listeningChannel,
-		commandCollectors:       make(map[string]content.AttachmentsContentCollector),
+		commandCollectors:       make(map[int]content.AttachmentsContentCollector),
 		lastTsGarbageCollected:  time.Now(),
 		garbageCleaningInterval: garbageCleaningInterval,
 	}
@@ -59,7 +59,7 @@ func (courier *MediaContentCourier) ReceiveAndDeliver() {
 				continue
 			}
 
-			if _, alreadyExists := courier.commandCollectors[received.Command.Name]; !alreadyExists {
+			if _, alreadyExists := courier.commandCollectors[received.Command.ID]; !alreadyExists {
 				courier.createNewCollectorForCommand(received)
 			}
 
@@ -67,7 +67,7 @@ func (courier *MediaContentCourier) ReceiveAndDeliver() {
 				courier.removeGarbageCollectors()
 			}
 
-			mediaContent := courier.commandCollectors[received.Command.Name].CollectOne()
+			mediaContent := courier.commandCollectors[received.Command.ID].CollectOne()
 			if len(mediaContent.Type) == 0 {
 				logging.Log.Warn(logPackage, "MediaContentCourier.ReceiveAndDeliver", "collected empty media content ignored")
 				courier.askToRetryRequest(received, user)
@@ -93,10 +93,10 @@ func (courier *MediaContentCourier) deliverContentResponse(
 }
 
 func (courier *MediaContentCourier) createNewCollectorForCommand(request *botobject.ContentRequestCommand) {
-	courier.commandCollectors[request.Command.Name] = NewCachedRandomAttachmentsContentCollector(
+	courier.commandCollectors[request.Command.ID] = NewCachedRandomAttachmentsContentCollector(
 		courier.userVkApi,
 		request.GetAttachmentsType(),
-		request.Command.Name,
+		request.Command.ID,
 		courier.contentCommandRepo,
 		courier.getMaxCachedAttachments(request.GetAttachmentsType()),
 		courier.getCacheRefreshThreshold(request.GetAttachmentsType()),
@@ -208,14 +208,14 @@ func (courier *MediaContentCourier) resolveContentID(
 
 func (courier *MediaContentCourier) removeGarbageCollectors() {
 	relevantCommands := courier.contentCommandRepo.FindAll()
-	relevantCommandsMap := make(map[string]bool, len(relevantCommands))
+	relevantCommandsMap := make(map[int]bool, len(relevantCommands))
 	for _, command := range relevantCommands {
-		relevantCommandsMap[command.Name] = true
+		relevantCommandsMap[command.ID] = true
 	}
 
-	for commandName, _ := range courier.commandCollectors {
-		if _, exist := relevantCommandsMap[commandName]; !exist {
-			delete(courier.commandCollectors, commandName)
+	for commandID, _ := range courier.commandCollectors {
+		if _, exist := relevantCommandsMap[commandID]; !exist {
+			delete(courier.commandCollectors, commandID)
 		}
 	}
 }

@@ -139,7 +139,7 @@ func (bot *LongPoolingBot) Serve() {
 			return
 		}
 
-		if contentCommand := bot.contentCommandRepo.FindByCommand(event.Text); contentCommand != nil {
+		if contentCommand := bot.contentCommandRepo.FindByCommandAlias(event.Text); contentCommand != nil {
 			bot.handleContentRequestCommand(mapper.NewContentCommandRequest(contentCommand, event))
 		}
 	})

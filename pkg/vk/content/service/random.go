@@ -15,7 +15,7 @@ import (
 type CachedRandomAttachmentsContentCollector struct {
 	client                *api.VK
 	attachmentsType       vk.AttachmentsType
-	contentCommand        string
+	contentCommandId      int
 	contentSourceRepo     repository.ContentCommandRepository
 	maxCachedAttachments  int
 	cachedAttachments     []object.WallWallpostAttachment
@@ -26,7 +26,7 @@ type CachedRandomAttachmentsContentCollector struct {
 func NewCachedRandomAttachmentsContentCollector(
 	client *api.VK,
 	attachmentsType vk.AttachmentsType,
-	contentCommand string,
+	contentCommandId int,
 	contentSourceRepo repository.ContentCommandRepository,
 	maxCachedAttachments int,
 	cacheRefreshThreshold float32,
@@ -34,7 +34,7 @@ func NewCachedRandomAttachmentsContentCollector(
 	return &CachedRandomAttachmentsContentCollector{
 		client:                client,
 		attachmentsType:       attachmentsType,
-		contentCommand:        contentCommand,
+		contentCommandId:      contentCommandId,
 		contentSourceRepo:     contentSourceRepo,
 		maxCachedAttachments:  maxCachedAttachments,
 		cachedAttachments:     nil,
@@ -51,7 +51,7 @@ func (collector *CachedRandomAttachmentsContentCollector) CollectOne() object.Wa
 	if len(collector.cachedAttachments) <= threshold {
 		collector.refreshCacheDifference()
 		if len(collector.cachedAttachments) == 0 {
-			logging.Log.Warn(logPackage, "CachedRandomAttachmentsContentCollector.CollectOne", "empty attachments. attachmentsType=%s, contentCommand=%s", collector.attachmentsType, collector.contentCommand)
+			logging.Log.Warn(logPackage, "CachedRandomAttachmentsContentCollector.CollectOne", "empty attachments. attachmentsType=%s, contentCommandId=%s", collector.attachmentsType, collector.contentCommandId)
 			return object.WallWallpostAttachment{}
 		}
 	}
@@ -74,8 +74,8 @@ func (collector *CachedRandomAttachmentsContentCollector) getAndRemoveCachedAtta
 }
 
 func (collector *CachedRandomAttachmentsContentCollector) refreshCacheDifference() {
-	contentCommand := collector.contentSourceRepo.FindByCommand(collector.contentCommand)
-	randomVkCommunity := collector.getRandomVkCommunity(contentCommand.GetSeparatedCommunityIDs())
+	contentCommand := collector.contentSourceRepo.FindById(collector.contentCommandId)
+	randomVkCommunity := collector.getRandomVkCommunity(contentCommand.GetCommunityIDs())
 	wallPostsCount := collector.getWallPostsCount(randomVkCommunity)
 	randomSequenceFetchOffset := collector.getRandomWallPostsOffset(wallPostsCount, collector.maxContentFetchBound)
 	contentSequence := collector.fetchContentSequence(randomVkCommunity, randomSequenceFetchOffset, collector.maxContentFetchBound)

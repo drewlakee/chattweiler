@@ -213,9 +213,18 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindAll() []model.Co
 	return updatedContentCommands
 }
 
-func (repo *CsvObjectStorageCachedContentCommandRepository) FindByCommand(commandName string) *model.ContentCommand {
+func (repo *CsvObjectStorageCachedContentCommandRepository) FindByCommandAlias(alias string) *model.ContentCommand {
+	for _, existingAlias := range repo.FindAll() {
+		if existingAlias.ContainsAlias(alias) {
+			return &existingAlias
+		}
+	}
+	return nil
+}
+
+func (repo *CsvObjectStorageCachedContentCommandRepository) FindById(ID int) *model.ContentCommand {
 	for _, contentCommand := range repo.FindAll() {
-		if strings.EqualFold(commandName, contentCommand.Name) {
+		if contentCommand.ID == ID {
 			return &contentCommand
 		}
 	}
