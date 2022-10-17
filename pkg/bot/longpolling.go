@@ -236,5 +236,6 @@ func (bot *LongPoolingBot) startMembershipCheckingAsync() {
 }
 
 func resolveChatInfoChangeEventType(event wrapper.ChatInfoChange) wrapper.TypeID {
+	// some framework specific workaround - messed event order 😵‍
 	return event.TypeID - 1
 }
