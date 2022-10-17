@@ -142,7 +142,7 @@ func (collector *CachedRandomAttachmentsContentCollector) fetchContentSequence(
 	for _, wallPost := range response.Items {
 		for _, attachment := range wallPost.Attachments {
 			if attachment.Type == string(collector.attachmentsType) &&
-				canShareInChat(collector.attachmentsType, attachment) &&
+				isSharingEnabled(collector.attachmentsType, attachment) &&
 				len(attachments) < count {
 				attachments = append(attachments, attachment)
 				break
@@ -153,7 +153,7 @@ func (collector *CachedRandomAttachmentsContentCollector) fetchContentSequence(
 	return attachments
 }
 
-func canShareInChat(attachmentsType vk.AttachmentsType, attachment object.WallWallpostAttachment) bool {
+func isSharingEnabled(attachmentsType vk.AttachmentsType, attachment object.WallWallpostAttachment) bool {
 	switch attachmentsType {
 	case vk.VideoType:
 		return bool(attachment.Video.CanRepost)
