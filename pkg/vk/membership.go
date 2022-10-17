@@ -127,19 +127,17 @@ func (checker *Checker) checkChatForNewWarning(members map[int]object.UsersUser,
 			newWarning.UserID = userProfile.ID
 			checker.membershipWarningsRepo.Insert(newWarning)
 
-			peerId := 2000000000 + int(checker.conversationId)
-			messageToSend := BuildMessageUsingPersonalizedPhrase(
-				peerId,
-				&userProfile,
-				model.MembershipWarningType,
-				checker.phrasesRepo.FindAllByType(model.MembershipWarningType),
-			)
+			phrases := checker.phrasesRepo.FindAllByType(model.MembershipWarningType)
+			if len(phrases) == 0 {
+				logging.Log.Warn(logPackage, "Checker.checkChatForNewWarning", "there's no membership warning phrases, message won't be sent")
+				return nil
+			}
 
-			if _, messageContainsPhrase := messageToSend["message"]; messageContainsPhrase {
-				_, err := checker.vkapi.MessagesSend(messageToSend)
-				if err != nil {
-					return err
-				}
+			peerId := 2000000000 + int(checker.conversationId)
+			messageToSend := BuildMessageUsingPersonalizedPhrase(peerId, &userProfile, phrases)
+			_, err := checker.vkapi.MessagesSend(messageToSend)
+			if err != nil {
+				return err
 			}
 
 			return nil

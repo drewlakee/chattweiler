@@ -16,19 +16,19 @@ import (
 	"github.com/SevereCloud/vksdk/v2/object"
 )
 
+func BuildDirectedMessage(peerId int) api.Params {
+	builder := params.NewMessagesSendBuilder()
+	builder.PeerID(peerId)
+	builder.RandomID(rand.Int())
+	return builder.Params
+}
+
 func BuildMessageUsingPersonalizedPhrase(
 	peerId int,
 	user *object.UsersUser,
-	phrasesType model.PhraseType,
 	phrases []model.Phrase,
 ) api.Params {
 	phrase := roulette.Spin(phrases...)
-	if phrase == nil {
-		if suppress, _ := strconv.ParseBool(utils.GetEnvOrDefault(configs.PhrasesSuppressLogsMissedPhrases)); !suppress {
-			logging.Log.Warn(logPackage, "BuildMessageUsingPersonalizedPhrase", "%s: were passed empty phrases, but response message supposed to be with a phrase", phrasesType)
-		}
-	}
-
 	builder := params.NewMessagesSendBuilder()
 	builder.PeerID(peerId)
 	builder.RandomID(rand.Int())

@@ -33,6 +33,11 @@ type LongPoolingBot struct {
 
 	contentCommandInputChannel chan *object.ContentRequestCommand
 	contentCourier             *service.MediaContentCourier
+
+	infoCommand                     string
+	welcomeNewMembersFeatureEnabled bool
+	goodbyeMembersFeatureEnabled    bool
+	contentRequestsFeatureEnabled   bool
 }
 
 func NewLongPoolingBot(
@@ -45,102 +50,88 @@ func NewLongPoolingBot(
 
 	mode := vklp.ReceiveAttachments + vklp.ExtendedEvents
 	lp, err := vklp.NewLongPoll(communityVkApi, mode)
-	if err != nil {
-		logging.Log.Panic(logPackage, "NewLongPoolingBot", err, "long-poll initialization error")
-	}
+	panicIfError(err, "NewLongPoolingBot", "long-poll initialization error")
 
 	chatId, err := strconv.ParseInt(utils.MustGetEnv(configs.VkCommunityChatID), 10, 64)
-	if err != nil {
-		logging.Log.Panic(logPackage, "NewLongPoolingBot", err, "%s: parsing of env variable is failed", configs.VkCommunityChatID.Key)
-	}
+	panicIfError(err, "NewLongPoolingBot", "%s: parsing of env variable is failed", configs.VkCommunityChatID.Key)
 
 	communityId, err := strconv.ParseInt(utils.MustGetEnv(configs.VkCommunityID), 10, 64)
-	if err != nil {
-		logging.Log.Panic(logPackage, "NewLongPoolingBot", err, "%s: parsing of env variable is failed", configs.VkCommunityID.Key)
-	}
+	panicIfError(err, "NewLongPoolingBot", "%s: parsing of env variable is failed", configs.VkCommunityID.Key)
 
 	membershipCheckInterval, err := time.ParseDuration(utils.GetEnvOrDefault(configs.ChatWarderMembershipCheckInterval))
-	if err != nil {
-		logging.Log.Panic(logPackage, "NewLongPoolingBot", err, "%s: parsing of env variable is failed", configs.ChatWarderMembershipCheckInterval.Key)
-	}
+	panicIfError(err, "NewLongPoolingBot", "%s: parsing of env variable is failed", configs.ChatWarderMembershipCheckInterval.Key)
 
 	gracePeriod, err := time.ParseDuration(utils.GetEnvOrDefault(configs.ChatWardenMembershipGracePeriod))
-	if err != nil {
-		logging.Log.Panic(logPackage, "NewLongPoolingBot", err, "%s: parsing of env variable is failed", configs.ChatWardenMembershipGracePeriod.Key)
-	}
-
-	vkUserApi := api.NewVK(utils.GetEnvOrDefault(configs.VkAdminUserToken))
+	panicIfError(err, "NewLongPoolingBot", "%s: parsing of env variable is failed", configs.ChatWardenMembershipGracePeriod.Key)
 
 	requestsQueueSize, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentRequestsQueueSize), 10, 32)
-	if err != nil {
-		logging.Log.Panic(logPackage, "NewLongPoolingBot", err, "%s: parsing of env variable is failed", configs.ContentRequestsQueueSize.Key)
-	}
+	panicIfError(err, "NewLongPoolingBot", "%s: parsing of env variable is failed", configs.ContentRequestsQueueSize.Key)
+
+	welcomeNewMembersFeatureEnabled, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.BotFunctionalityWelcomeNewMembers))
+	panicIfError(err, "NewLongPoolingBot", "%s: parsing of env variable is failed", configs.BotFunctionalityWelcomeNewMembers.Key)
+
+	goodbyeMembersFeatureEnabled, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.BotFunctionalityGoodbyeMembers))
+	panicIfError(err, "NewLongPoolingBot", "%s: parsing of env variable is failed", configs.BotFunctionalityGoodbyeMembers.Key)
+
+	contentRequestsFeatureEnabled, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.BotFunctionalityContentCommands))
+	panicIfError(err, "NewLongPoolingBot", "%s: parsing of env variable is failed", configs.BotFunctionalityContentCommands.Key)
+
+	infoCommand := utils.GetEnvOrDefault(configs.BotCommandOverrideInfo)
 
 	contentRequestsInputChannel := make(chan *object.ContentRequestCommand, requestsQueueSize)
 
 	garbageCollectorsCleaningInterval, err := time.ParseDuration(utils.GetEnvOrDefault(configs.ContentGarbageCollectorsCleaningInterval))
-	if err != nil {
-		logging.Log.Panic(logPackage, "NewLongPoolingBot", err, "%s: parsing of env variable is failed", configs.ContentGarbageCollectorsCleaningInterval.Key)
-	}
+	panicIfError(err, "%s: parsing of env variable is failed", configs.ContentGarbageCollectorsCleaningInterval.Key)
+
+	vkUserApi := api.NewVK(utils.GetEnvOrDefault(configs.VkAdminUserToken))
+	vklWrapper := vklpwrapper.NewWrapper(lp)
+	membershipChecker := vk.NewChecker(chatId, communityId, membershipCheckInterval, gracePeriod, communityVkApi, phrasesRepo, membershipWarningsRepo)
+	contentCourier := service.NewMediaContentCourier(communityVkApi, vkUserApi, phrasesRepo, contentCommandRepo, contentRequestsInputChannel, garbageCollectorsCleaningInterval)
 
 	return &LongPoolingBot{
-		vkapi:                      communityVkApi,
-		vklp:                       lp,
-		vklpwrapper:                vklpwrapper.NewWrapper(lp),
-		phrasesRepo:                phrasesRepo,
-		contentCommandRepo:         contentCommandRepo,
-		membershipChecker:          vk.NewChecker(chatId, communityId, membershipCheckInterval, gracePeriod, communityVkApi, phrasesRepo, membershipWarningsRepo),
-		contentCourier:             service.NewMediaContentCourier(communityVkApi, vkUserApi, phrasesRepo, contentCommandRepo, contentRequestsInputChannel, garbageCollectorsCleaningInterval),
-		contentCommandInputChannel: contentRequestsInputChannel,
+		vkapi:                           communityVkApi,
+		vklp:                            lp,
+		vklpwrapper:                     vklWrapper,
+		phrasesRepo:                     phrasesRepo,
+		contentCommandRepo:              contentCommandRepo,
+		membershipChecker:               membershipChecker,
+		contentCourier:                  contentCourier,
+		contentCommandInputChannel:      contentRequestsInputChannel,
+		welcomeNewMembersFeatureEnabled: welcomeNewMembersFeatureEnabled,
+		goodbyeMembersFeatureEnabled:    goodbyeMembersFeatureEnabled,
+		contentRequestsFeatureEnabled:   contentRequestsFeatureEnabled,
+		infoCommand:                     infoCommand,
 	}
 }
 
 func (bot *LongPoolingBot) Serve() {
-	welcomeNewMembersFeatureEnabled, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.BotFunctionalityWelcomeNewMembers))
-	if err != nil {
-		logging.Log.Panic(logPackage, "LongPoolingBot.Serve", err, "%s: parsing of env variable is failed", configs.BotFunctionalityWelcomeNewMembers.Key)
-	}
-
-	goodbyeMembersFeatureEnabled, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.BotFunctionalityGoodbyeMembers))
-	if err != nil {
-		logging.Log.Panic(logPackage, "LongPoolingBot.Serve", err, "%s: parsing of env variable is failed", configs.BotFunctionalityGoodbyeMembers.Key)
-	}
-
 	bot.vklpwrapper.OnChatInfoChange(func(event wrapper.ChatInfoChange) {
 		switch resolveChatInfoChangeEventType(event) {
 		case vklpwrapper.ChatUserCome:
-			if welcomeNewMembersFeatureEnabled {
+			if bot.welcomeNewMembersFeatureEnabled {
 				bot.handleChatUserJoinEvent(mapper.NewChatEventFromFromChatInfoChange(event))
 			}
 		case vklpwrapper.ChatUserLeave:
-			if goodbyeMembersFeatureEnabled {
+			if bot.goodbyeMembersFeatureEnabled {
 				bot.handleChatUserLeavingEvent(mapper.NewChatEventFromFromChatInfoChange(event))
 			}
 		}
 	})
 
-	contentRequestsFeatureEnabled, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.BotFunctionalityContentCommands))
-	if err != nil {
-		logging.Log.Panic(logPackage, "LongPoolingBot.Serve", err, "%s: parsing of env variable is failed", configs.BotFunctionalityContentCommands.Key)
-	}
-
-	if contentRequestsFeatureEnabled {
+	if bot.contentRequestsFeatureEnabled {
 		// run async
 		go bot.contentCourier.ReceiveAndDeliver()
 	}
 
-	infoCommand := utils.GetEnvOrDefault(configs.BotCommandOverrideInfo)
 	bot.vklpwrapper.OnNewMessage(func(event wrapper.NewMessage) {
-		if strings.EqualFold(event.Text, infoCommand) {
+		if strings.EqualFold(event.Text, bot.infoCommand) {
 			bot.handleInfoCommand(mapper.NewChatEventFromNewMessage(event))
 		}
 
-		if !contentRequestsFeatureEnabled {
-			return
-		}
-
-		if contentCommand := bot.contentCommandRepo.FindByCommandAlias(event.Text); contentCommand != nil {
-			bot.handleContentRequestCommand(mapper.NewContentCommandRequest(contentCommand, event))
+		if bot.contentRequestsFeatureEnabled {
+			if contentCommand := bot.contentCommandRepo.FindByCommandAlias(event.Text); contentCommand != nil {
+				bot.handleContentRequestCommand(mapper.NewContentCommandRequest(contentCommand, event))
+			}
 		}
 	})
 
@@ -148,10 +139,8 @@ func (bot *LongPoolingBot) Serve() {
 	bot.startMembershipCheckingAsync()
 
 	logging.Log.Info(logPackage, "LongPoolingBot.Serve", "Bot is running...")
-	err = bot.vklp.Run()
-	if err != nil {
-		logging.Log.Panic(logPackage, "LongPoolingBot.Serve", err, "bot is crashed")
-	}
+	err := bot.vklp.Run()
+	panicIfError(err, "LongPoolingBot.Serve", "bot is crashed")
 }
 
 func (bot *LongPoolingBot) handleChatUserJoinEvent(event *object.ChatEvent) {
@@ -162,18 +151,13 @@ func (bot *LongPoolingBot) handleChatUserJoinEvent(event *object.ChatEvent) {
 	}
 
 	logging.Log.Info(logPackage, "LongPoolingBot.handleChatUserJoinEvent", "'%s' user is joined", user.ScreenName)
-	messageToSend := vk.BuildMessageUsingPersonalizedPhrase(
-		event.PeerID,
-		user,
-		model.WelcomeType,
-		bot.phrasesRepo.FindAllByType(model.WelcomeType),
-	)
-
-	if _, messageContainsPhrase := messageToSend["message"]; !messageContainsPhrase {
-		logging.Log.Warn(logPackage, "LongPoolingBot.handleChatUserJoinEvent", "message doesn't have any phrase to send for '%s'", user.ScreenName)
+	phrases := bot.phrasesRepo.FindAllByType(model.WelcomeType)
+	if len(phrases) == 0 {
+		logging.Log.Warn(logPackage, "LongPoolingBot.handleChatUserJoinEvent", "there's no welcome phrases, message won't be sent", user.ScreenName)
 		return
 	}
 
+	messageToSend := vk.BuildMessageUsingPersonalizedPhrase(event.PeerID, user, phrases)
 	_, err = bot.vkapi.MessagesSend(messageToSend)
 	if err != nil {
 		logging.Log.Error(logPackage, "LongPoolingBot.handleChatUserJoinEvent", err, "message sending error")
@@ -188,18 +172,13 @@ func (bot *LongPoolingBot) handleChatUserLeavingEvent(event *object.ChatEvent) {
 	}
 
 	logging.Log.Info(logPackage, "LongPoolingBot.handleChatUserLeavingEvent", "'%s' user is gone", user.ScreenName)
-	messageToSend := vk.BuildMessageUsingPersonalizedPhrase(
-		event.PeerID,
-		user,
-		model.GoodbyeType,
-		bot.phrasesRepo.FindAllByType(model.GoodbyeType),
-	)
-
-	if _, messageContainsPhrase := messageToSend["message"]; !messageContainsPhrase {
-		logging.Log.Warn(logPackage, "LongPoolingBot.handleChatUserLeavingEvent", "message doesn't have any phrase to send for '%s'", user.ScreenName)
+	phrases := bot.phrasesRepo.FindAllByType(model.GoodbyeType)
+	if len(phrases) == 0 {
+		logging.Log.Warn(logPackage, "LongPoolingBot.handleChatUserJoinEvent", "there's no goodbye phrases, message won't be sent", user.ScreenName)
 		return
 	}
 
+	messageToSend := vk.BuildMessageUsingPersonalizedPhrase(event.PeerID, user, phrases)
 	_, err = bot.vkapi.MessagesSend(messageToSend)
 	if err != nil {
 		logging.Log.Error(logPackage, "LongPoolingBot.handleChatUserLeavingEvent", err, "message sending error")
@@ -232,6 +211,12 @@ func (bot *LongPoolingBot) startMembershipCheckingAsync() {
 
 	if checkMembershipFeatureEnabled {
 		go bot.membershipChecker.LoopCheck()
+	}
+}
+
+func panicIfError(err error, funcName, messageFormat string, args ...interface{}) {
+	if err != nil {
+		logging.Log.Panic(logPackage, funcName, err, messageFormat, args)
 	}
 }
 

@@ -84,7 +84,15 @@ func (courier *MediaContentCourier) deliverContentResponse(
 	user *object.UsersUser,
 	mediaContent object.WallWallpostAttachment,
 ) {
-	messageToSend := courier.getResponseMessage(request, user)
+	phrases := courier.phrasesRepo.FindAllByType(model.ContentRequestType)
+
+	var messageToSend api.Params
+	if len(phrases) == 0 {
+		messageToSend = vk.BuildDirectedMessage(request.Event.PeerID)
+	} else {
+		messageToSend = vk.BuildMessageUsingPersonalizedPhrase(request.Event.PeerID, user, phrases)
+	}
+
 	messageToSend["attachment"] = courier.resolveContentID(mediaContent, request.GetAttachmentsType())
 	_, err := courier.communityVkApi.MessagesSend(messageToSend)
 	if err != nil {
@@ -107,31 +115,17 @@ func (courier *MediaContentCourier) askToRetryRequest(
 	request *botobject.ContentRequestCommand,
 	user *object.UsersUser,
 ) {
-	messageToSend := vk.BuildMessageUsingPersonalizedPhrase(
-		request.Event.PeerID,
-		user,
-		model.RetryType,
-		courier.phrasesRepo.FindAllByType(model.RetryType),
-	)
-
-	if messageToSend["message"] != nil {
-		_, err := courier.communityVkApi.MessagesSend(messageToSend)
-		if err != nil {
-			logging.Log.Error(logPackage, "MediaContentCourier.askToRetryRequest", err, "message sending error")
-		}
+	phrases := courier.phrasesRepo.FindAllByType(model.RetryType)
+	if len(phrases) == 0 {
+		logging.Log.Warn(logPackage, "MediaContentCourier.askToRetryRequest", "there's no ask retry phrases, message won't be sent", user.ScreenName)
+		return
 	}
-}
 
-func (courier *MediaContentCourier) getResponseMessage(
-	request *botobject.ContentRequestCommand,
-	user *object.UsersUser,
-) api.Params {
-	return vk.BuildMessageUsingPersonalizedPhrase(
-		request.Event.PeerID,
-		user,
-		model.ContentRequestType,
-		courier.phrasesRepo.FindAllByType(model.ContentRequestType),
-	)
+	messageToSend := vk.BuildMessageUsingPersonalizedPhrase(request.Event.PeerID, user, phrases)
+	_, err := courier.communityVkApi.MessagesSend(messageToSend)
+	if err != nil {
+		logging.Log.Error(logPackage, "MediaContentCourier.askToRetryRequest", err, "message sending error")
+	}
 }
 
 func (courier *MediaContentCourier) getMaxCachedAttachments(mediaType vk.AttachmentsType) int {
