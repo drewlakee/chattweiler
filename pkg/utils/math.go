@@ -9,3 +9,13 @@ func ClampFloat32(value float32, left float32, right float32) float32 {
 
 	return value
 }
+
+func ClampInt(value int, left int, right int) int {
+	if value > right {
+		return right
+	} else if value < left {
+		return left
+	}
+
+	return value
+}

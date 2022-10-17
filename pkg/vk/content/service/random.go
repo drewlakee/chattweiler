@@ -75,9 +75,14 @@ func (collector *CachedRandomAttachmentsContentCollector) getAndRemoveCachedAtta
 
 func (collector *CachedRandomAttachmentsContentCollector) refreshCacheDifference() {
 	contentCommand := collector.contentSourceRepo.FindById(collector.contentCommandId)
-	randomVkCommunity := collector.getRandomVkCommunity(contentCommand.GetCommunityIDs())
-	wallPostsCount := collector.getWallPostsCount(randomVkCommunity)
-	randomSequenceFetchOffset := collector.getRandomWallPostsOffset(wallPostsCount, collector.maxContentFetchBound)
+	randomVkCommunity := collector.getCommunity(contentCommand.GetCommunityIDs())
+
+	count, err := vk.GetWallPostsCount(collector.client, randomVkCommunity)
+	if err != nil {
+		logging.Log.Error(logPackage, "CachedRandomAttachmentsContentCollector.refreshCacheDifference", err, "vk api error")
+	}
+
+	randomSequenceFetchOffset := collector.getRandomWallPostsOffset(count, collector.maxContentFetchBound)
 	contentSequence := collector.fetchContentSequence(randomVkCommunity, randomSequenceFetchOffset, collector.maxContentFetchBound)
 	collector.cachedAttachments = append(collector.cachedAttachments, collector.gatherDifference(contentSequence)...)
 }
@@ -114,10 +119,7 @@ func (collector *CachedRandomAttachmentsContentCollector) getRandomWallPostsOffs
 	if (wallPostsCount - randomSequenceFetchOffset) < maxContentFetchBound {
 		randomSequenceFetchOffset -= maxContentFetchBound - (wallPostsCount - randomSequenceFetchOffset)
 	}
-	if randomSequenceFetchOffset < 0 {
-		randomSequenceFetchOffset = 1
-	}
-	return randomSequenceFetchOffset
+	return utils.ClampInt(randomSequenceFetchOffset, 0, maxContentFetchBound)
 }
 
 func (collector *CachedRandomAttachmentsContentCollector) fetchContentSequence(
@@ -159,20 +161,7 @@ func canShareInChat(attachmentsType vk.AttachmentsType, attachment object.WallWa
 	return true
 }
 
-func (collector *CachedRandomAttachmentsContentCollector) getRandomVkCommunity(communities []string) string {
+func (collector *CachedRandomAttachmentsContentCollector) getCommunity(communities []string) string {
 	rand.Seed(time.Now().UnixNano())
 	return communities[rand.Intn(len(communities))]
-}
-
-func (collector *CachedRandomAttachmentsContentCollector) getWallPostsCount(community string) int {
-	response, err := collector.client.WallGet(api.Params{
-		"domain": community,
-		"count":  1,
-	})
-
-	if err != nil {
-		logging.Log.Error(logPackage, "CachedRandomAttachmentsContentCollector.getWallPostsCount", err, "vk api error")
-	}
-
-	return response.Count
 }

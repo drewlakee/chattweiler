@@ -38,3 +38,16 @@ func GetUserInfo(vkapi *api.VK, userID string) (*object.UsersUser, error) {
 
 	return &users[0], err
 }
+
+func GetWallPostsCount(vkapi *api.VK, community string) (int, error) {
+	response, err := vkapi.WallGet(api.Params{
+		"domain": community,
+		"count":  1,
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return response.Count, nil
+}
