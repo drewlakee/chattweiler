@@ -1,6 +1,6 @@
 module chattweiler
 
-go 1.17
+go 1.19
 
 require (
 	github.com/SevereCloud/vksdk/v2 v2.13.1
