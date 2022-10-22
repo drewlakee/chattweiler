@@ -5,8 +5,6 @@ var VkCommunityID = NewMandatoryConfig("vk.community.id")
 var VkCommunityChatID = NewMandatoryConfig("vk.community.chat.id")
 var VkAdminUserToken = NewOptionalConfig("vk.admin.user.token", "")
 
-var PgDatasourceString = NewMandatoryConfig("pg.datasource.string")
-
 var ChatWarderMembershipCheckInterval = NewOptionalConfig("chat.warden.membership.check.interval", "10m")
 var ChatWardenMembershipGracePeriod = NewOptionalConfig("chat.warden.membership.grace.period", "1h")
 var ChatUseFirstNameInsteadUsername = NewOptionalConfig("chat.use.first.name.instead.username", "false")
