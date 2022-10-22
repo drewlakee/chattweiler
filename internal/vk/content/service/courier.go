@@ -2,21 +2,16 @@ package service
 
 import (
 	botobject "chattweiler/internal/bot/object"
-	"chattweiler/internal/configs"
 	"chattweiler/internal/logging"
 	"chattweiler/internal/repository"
 	"chattweiler/internal/repository/model"
-	"chattweiler/internal/utils"
 	"chattweiler/internal/vk"
 	"chattweiler/internal/vk/content"
-	"strconv"
 	"time"
 
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/object"
 )
-
-var logPackage = "service"
 
 type MediaContentCourier struct {
 	communityVkApi          *api.VK
@@ -67,14 +62,14 @@ func (courier *MediaContentCourier) ReceiveAndDeliver() {
 				courier.removeGarbageCollectors()
 			}
 
-			mediaContent := courier.commandCollectors[received.Command.GetID()].CollectOne()
-			if len(mediaContent.Type) == 0 {
+			mediaAttachment := courier.commandCollectors[received.Command.GetID()].CollectOne()
+			if mediaAttachment == nil || len(mediaAttachment.Type) == 0 {
 				logging.Log.Warn(logPackage, "MediaContentCourier.ReceiveAndDeliver", "collected empty media content ignored")
 				courier.askToRetryRequest(received, user)
 				continue
 			}
 
-			courier.deliverContentResponse(received, user, mediaContent)
+			courier.deliverContentResponse(received, user, mediaAttachment)
 		}
 	}
 }
@@ -82,7 +77,7 @@ func (courier *MediaContentCourier) ReceiveAndDeliver() {
 func (courier *MediaContentCourier) deliverContentResponse(
 	request *botobject.ContentRequestCommand,
 	user *object.UsersUser,
-	mediaContent object.WallWallpostAttachment,
+	mediaContent *content.MediaAttachment,
 ) {
 	phrases := courier.phrasesRepo.FindAllByType(model.ContentRequestType)
 
@@ -93,7 +88,7 @@ func (courier *MediaContentCourier) deliverContentResponse(
 		messageToSend = vk.BuildMessageUsingPersonalizedPhrase(request.Event.PeerID, user, phrases)
 	}
 
-	messageToSend["attachment"] = courier.resolveContentID(mediaContent, request.GetAttachmentsType())
+	messageToSend["attachment"] = courier.resolveAttachmentID(mediaContent)
 	_, err := courier.communityVkApi.MessagesSend(messageToSend)
 	if err != nil {
 		logging.Log.Error(logPackage, "MediaContentCourier.deliverContentResponse", err, "message sending error")
@@ -103,11 +98,9 @@ func (courier *MediaContentCourier) deliverContentResponse(
 func (courier *MediaContentCourier) createNewCollectorForCommand(request *botobject.ContentRequestCommand) {
 	courier.commandCollectors[request.Command.GetID()] = NewCachedRandomAttachmentsContentCollector(
 		courier.userVkApi,
-		request.GetAttachmentsType(),
+		request.GetAttachmentsTypes(),
 		request.Command.GetID(),
 		courier.contentCommandRepo,
-		courier.getMaxCachedAttachments(request.GetAttachmentsType()),
-		courier.getCacheRefreshThreshold(request.GetAttachmentsType()),
 	)
 }
 
@@ -128,73 +121,14 @@ func (courier *MediaContentCourier) askToRetryRequest(
 	}
 }
 
-func (courier *MediaContentCourier) getMaxCachedAttachments(mediaType vk.AttachmentsType) int {
-	switch mediaType {
-	case vk.PhotoType:
-		pictureMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentPictureMaxCachedAttachments), 10, 32)
-		if err != nil {
-			logging.Log.Panic(logPackage, "MediaContentCourier.getMaxCachedAttachments", err, "%s: parsing of env variable is failed", configs.ContentPictureMaxCachedAttachments.Key)
-		}
-
-		return int(pictureMaxCachedAttachments)
+func (courier *MediaContentCourier) resolveAttachmentID(mediaContent *content.MediaAttachment) string {
+	switch mediaContent.Type {
 	case vk.AudioType:
-		audioMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentAudioMaxCachedAttachments), 10, 32)
-		if err != nil {
-			logging.Log.Panic(logPackage, "MediaContentCourier.getMaxCachedAttachments", err, "%s: parsing of env variable is failed", configs.ContentAudioMaxCachedAttachments.Key)
-		}
-
-		return int(audioMaxCachedAttachments)
-	case vk.VideoType:
-		videoMaxCachedAttachments, err := strconv.ParseInt(utils.GetEnvOrDefault(configs.ContentVideoMaxCachedAttachments), 10, 32)
-		if err != nil {
-			logging.Log.Panic(logPackage, "MediaContentCourier.getMaxCachedAttachments", err, "%s: parsing of env variable is failed", configs.ContentVideoMaxCachedAttachments.Key)
-		}
-
-		return int(videoMaxCachedAttachments)
-	}
-
-	return 0
-}
-
-func (courier *MediaContentCourier) getCacheRefreshThreshold(mediaType vk.AttachmentsType) float32 {
-	switch mediaType {
+		return mediaContent.Data.Audio.ToAttachment()
 	case vk.PhotoType:
-		pictureCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault(configs.ContentPictureCacheRefreshThreshold), 32)
-		if err != nil {
-			logging.Log.Panic(logPackage, "MediaContentCourier.getCacheRefreshThreshold", err, "%s: parsing of env variable is failed", configs.ContentPictureCacheRefreshThreshold.Key)
-		}
-
-		return float32(pictureCacheRefreshThreshold)
-	case vk.AudioType:
-		audioCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault(configs.ContentAudioCacheRefreshThreshold), 32)
-		if err != nil {
-			logging.Log.Panic(logPackage, "MediaContentCourier.getCacheRefreshThreshold", err, "%s: parsing of env variable is failed", configs.ContentAudioCacheRefreshThreshold.Key)
-		}
-
-		return float32(audioCacheRefreshThreshold)
+		return mediaContent.Data.Photo.ToAttachment()
 	case vk.VideoType:
-		videoCacheRefreshThreshold, err := strconv.ParseFloat(utils.GetEnvOrDefault(configs.ContentVideoCacheRefreshThreshold), 32)
-		if err != nil {
-			logging.Log.Panic(logPackage, "MediaContentCourier.getCacheRefreshThreshold", err, "%s: parsing of env variable is failed", configs.ContentAudioCacheRefreshThreshold.Key)
-		}
-
-		return float32(videoCacheRefreshThreshold)
-	}
-
-	return 0
-}
-
-func (courier *MediaContentCourier) resolveContentID(
-	mediaContent object.WallWallpostAttachment,
-	deliverContentType vk.AttachmentsType,
-) string {
-	switch deliverContentType {
-	case vk.AudioType:
-		return mediaContent.Audio.ToAttachment()
-	case vk.PhotoType:
-		return mediaContent.Photo.ToAttachment()
-	case vk.VideoType:
-		return mediaContent.Video.ToAttachment()
+		return mediaContent.Data.Video.ToAttachment()
 	}
 
 	return ""

@@ -10,14 +10,13 @@ import (
 
 var logPackage = "vk"
 
-type AttachmentsType string
+type MediaAttachmentType string
 
 const (
-	AudioType    AttachmentsType = "audio"
-	PhotoType    AttachmentsType = "photo"
-	VideoType    AttachmentsType = "video"
-	DocumentType AttachmentsType = "doc"
-	Undefined    AttachmentsType = "undefined"
+	AudioType    MediaAttachmentType = "audio"
+	PhotoType    MediaAttachmentType = "photo"
+	VideoType    MediaAttachmentType = "video"
+	DocumentType MediaAttachmentType = "doc"
 )
 
 func GetUserInfo(vkapi *api.VK, userID string) (*object.UsersUser, error) {

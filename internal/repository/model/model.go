@@ -75,10 +75,10 @@ type MembershipWarning struct {
 
 // CsvContentCommand storage specific object of ContentCommand
 type CsvContentCommand struct {
-	ID               int              `csv:"id"`
-	Commands         string           `csv:"commands"`
-	MediaContentType MediaContentType `csv:"media_type"`
-	CommunityIDs     string           `csv:"community_ids"`
+	ID                int    `csv:"id"`
+	Commands          string `csv:"commands"`
+	MediaContentTypes string `csv:"media_types"`
+	CommunityIDs      string `csv:"community_ids"`
 }
 
 // ContentCommand domain object
@@ -89,7 +89,7 @@ type ContentCommand struct {
 	commandsList []string
 
 	// media content type which command supposed to deliver on call
-	mediaContentType MediaContentType
+	mediaContentType []MediaContentType
 
 	// communities that are able for command to use as content sources
 	communityIDsList []string
@@ -99,7 +99,7 @@ func (contentCommand ContentCommand) GetAliases() []string {
 	return contentCommand.commandsList
 }
 
-func (contentCommand ContentCommand) GetMediaType() MediaContentType {
+func (contentCommand ContentCommand) GetMediaTypes() []MediaContentType {
 	return contentCommand.mediaContentType
 }
 
@@ -114,7 +114,7 @@ func (contentCommand ContentCommand) GetCommunityIDs() []string {
 func NewContentCommand(
 	id int,
 	commands []string,
-	mediaContentType MediaContentType,
+	mediaContentType []MediaContentType,
 	communityIDs []string,
 ) ContentCommand {
 	return ContentCommand{

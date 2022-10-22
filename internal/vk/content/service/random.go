@@ -5,6 +5,7 @@ import (
 	"chattweiler/internal/repository"
 	"chattweiler/internal/utils"
 	"chattweiler/internal/vk"
+	"chattweiler/internal/vk/content"
 	"math/rand"
 	"time"
 
@@ -13,67 +14,64 @@ import (
 )
 
 type CachedRandomAttachmentsContentCollector struct {
-	client                *api.VK
-	attachmentsType       vk.AttachmentsType
-	contentCommandId      int
-	contentSourceRepo     repository.ContentCommandRepository
-	maxCachedAttachments  int
-	cachedAttachments     []object.WallWallpostAttachment
-	cacheRefreshThreshold float32
-	maxContentFetchBound  int
+	client               *api.VK
+	contentCommandId     int
+	contentSourceRepo    repository.ContentCommandRepository
+	cachedAttachments    map[vk.MediaAttachmentType][]content.MediaAttachment
+	maxContentFetchBound int
+	attachmentTypes      []vk.MediaAttachmentType
 }
 
 func NewCachedRandomAttachmentsContentCollector(
 	client *api.VK,
-	attachmentsType vk.AttachmentsType,
+	attachmentTypes []vk.MediaAttachmentType,
 	contentCommandId int,
 	contentSourceRepo repository.ContentCommandRepository,
-	maxCachedAttachments int,
-	cacheRefreshThreshold float32,
 ) *CachedRandomAttachmentsContentCollector {
 	return &CachedRandomAttachmentsContentCollector{
-		client:                client,
-		attachmentsType:       attachmentsType,
-		contentCommandId:      contentCommandId,
-		contentSourceRepo:     contentSourceRepo,
-		maxCachedAttachments:  maxCachedAttachments,
-		cachedAttachments:     nil,
-		cacheRefreshThreshold: utils.ClampFloat32(cacheRefreshThreshold, 0.0, 1.0),
+		client:            client,
+		contentCommandId:  contentCommandId,
+		contentSourceRepo: contentSourceRepo,
+		cachedAttachments: make(map[vk.MediaAttachmentType][]content.MediaAttachment),
+		attachmentTypes:   attachmentTypes,
 
 		// https://dev.vk.com/method/wall.get#count parameters' constraints
 		maxContentFetchBound: 100,
 	}
 }
 
-func (collector *CachedRandomAttachmentsContentCollector) CollectOne() object.WallWallpostAttachment {
+func (collector *CachedRandomAttachmentsContentCollector) CollectOne() *content.MediaAttachment {
 	rand.Seed(time.Now().UnixNano())
-	threshold := int(float32(collector.maxCachedAttachments) * collector.cacheRefreshThreshold)
-	if len(collector.cachedAttachments) <= threshold {
-		collector.refreshCacheDifference()
-		if len(collector.cachedAttachments) == 0 {
-			logging.Log.Warn(logPackage, "CachedRandomAttachmentsContentCollector.CollectOne", "empty attachments. attachmentsType=%s, contentCommandId=%s", collector.attachmentsType, collector.contentCommandId)
-			return object.WallWallpostAttachment{}
+	attachmentType := collector.attachmentTypes[rand.Intn(len(collector.attachmentTypes))]
+	threshold := int(float32(getMaxCachedAttachments(attachmentType)) * getCacheRefreshThresholdFor(attachmentType))
+	attachments, exists := collector.cachedAttachments[attachmentType]
+	if !exists || len(attachments) <= threshold {
+		collector.refreshCacheDifference(attachmentType)
+		if len(collector.cachedAttachments[attachmentType]) == 0 {
+			logging.Log.Warn(logPackage, "CachedRandomAttachmentsContentCollector.CollectOne", "empty attachments. attachmentsType=%s, contentCommandId=%d", attachmentType, collector.contentCommandId)
+			return nil
 		}
 	}
 
-	return collector.getAndRemoveCachedAttachment()
+	return collector.getAndRemoveCachedAttachment(attachmentType)
 }
 
-func (collector *CachedRandomAttachmentsContentCollector) getAndRemoveCachedAttachment() object.WallWallpostAttachment {
-	randomCachedAttachmentIndex := rand.Intn(len(collector.cachedAttachments))
-	attachment := collector.cachedAttachments[randomCachedAttachmentIndex]
+func (collector *CachedRandomAttachmentsContentCollector) getAndRemoveCachedAttachment(attachmentType vk.MediaAttachmentType) *content.MediaAttachment {
+	attachments := collector.cachedAttachments[attachmentType]
+	randomCachedAttachmentIndex := rand.Intn(len(attachments))
+	attachment := attachments[randomCachedAttachmentIndex]
 
 	// swap last with random chosen one
-	lastAttachment := collector.cachedAttachments[len(collector.cachedAttachments)-1]
-	collector.cachedAttachments[len(collector.cachedAttachments)-1] = collector.cachedAttachments[randomCachedAttachmentIndex]
-	collector.cachedAttachments[randomCachedAttachmentIndex] = lastAttachment
+	lastAttachment := attachments[len(attachments)-1]
+	attachments[len(attachments)-1] = attachments[randomCachedAttachmentIndex]
+	attachments[randomCachedAttachmentIndex] = lastAttachment
 
 	// and cut off the tail of slice
-	collector.cachedAttachments = collector.cachedAttachments[:len(collector.cachedAttachments)-1]
-	return attachment
+	collector.cachedAttachments[attachmentType] = attachments[:len(attachments)-1]
+	return &attachment
 }
 
-func (collector *CachedRandomAttachmentsContentCollector) refreshCacheDifference() {
+func (collector *CachedRandomAttachmentsContentCollector) refreshCacheDifference(attachmentType vk.MediaAttachmentType) {
 	contentCommand := collector.contentSourceRepo.FindById(collector.contentCommandId)
 	randomVkCommunity := collector.getCommunity(contentCommand.GetCommunityIDs())
 
@@ -83,18 +81,19 @@ func (collector *CachedRandomAttachmentsContentCollector) refreshCacheDifference
 	}
 
 	randomSequenceFetchOffset := collector.getRandomWallPostsOffset(count, collector.maxContentFetchBound)
-	contentSequence := collector.fetchContentSequence(randomVkCommunity, randomSequenceFetchOffset, collector.maxContentFetchBound)
-	collector.cachedAttachments = append(collector.cachedAttachments, collector.gatherDifference(contentSequence)...)
+	contentSequence := collector.fetchContentSequence(attachmentType, randomVkCommunity, randomSequenceFetchOffset, collector.maxContentFetchBound)
+	collector.cachedAttachments[attachmentType] = append(collector.cachedAttachments[attachmentType], collector.gatherDifference(contentSequence, attachmentType)...)
 }
 
 func (collector *CachedRandomAttachmentsContentCollector) gatherDifference(
 	contentSequence []object.WallWallpostAttachment,
-) []object.WallWallpostAttachment {
+	attachmentType vk.MediaAttachmentType,
+) []content.MediaAttachment {
 	alreadyPickedUpContentVector := make([]int, len(contentSequence))
 	alreadyPickedUpContentCount := 0
 
-	difference := collector.maxCachedAttachments - len(collector.cachedAttachments)
-	var collectResult []object.WallWallpostAttachment
+	difference := getMaxCachedAttachments(attachmentType) - len(collector.cachedAttachments[attachmentType])
+	var collectResult []content.MediaAttachment
 	for alreadyPickedUpContentCount != len(contentSequence) && difference > 0 {
 		randomIndex := rand.Intn(len(contentSequence))
 		for alreadyPickedUpContentVector[randomIndex] == 1 {
@@ -104,7 +103,10 @@ func (collector *CachedRandomAttachmentsContentCollector) gatherDifference(
 			}
 		}
 
-		collectResult = append(collectResult, contentSequence[randomIndex])
+		collectResult = append(collectResult, content.MediaAttachment{
+			Type: attachmentType,
+			Data: &contentSequence[randomIndex],
+		})
 		alreadyPickedUpContentVector[randomIndex] = 1
 
 		alreadyPickedUpContentCount++
@@ -119,10 +121,11 @@ func (collector *CachedRandomAttachmentsContentCollector) getRandomWallPostsOffs
 	if (wallPostsCount - randomSequenceFetchOffset) < maxContentFetchBound {
 		randomSequenceFetchOffset -= maxContentFetchBound - (wallPostsCount - randomSequenceFetchOffset)
 	}
-	return utils.ClampInt(randomSequenceFetchOffset, 0, maxContentFetchBound)
+	return utils.ClampInt(randomSequenceFetchOffset, 0, wallPostsCount)
 }
 
 func (collector *CachedRandomAttachmentsContentCollector) fetchContentSequence(
+	attachmentType vk.MediaAttachmentType,
 	community string,
 	offset,
 	count int,
@@ -141,8 +144,8 @@ func (collector *CachedRandomAttachmentsContentCollector) fetchContentSequence(
 	var attachments []object.WallWallpostAttachment
 	for _, wallPost := range response.Items {
 		for _, attachment := range wallPost.Attachments {
-			if attachment.Type == string(collector.attachmentsType) &&
-				isSharingEnabled(collector.attachmentsType, attachment) &&
+			if attachment.Type == string(attachmentType) &&
+				isSharingEnabled(attachmentType, attachment) &&
 				len(attachments) < count {
 				attachments = append(attachments, attachment)
 				break
@@ -153,7 +156,7 @@ func (collector *CachedRandomAttachmentsContentCollector) fetchContentSequence(
 	return attachments
 }
 
-func isSharingEnabled(attachmentsType vk.AttachmentsType, attachment object.WallWallpostAttachment) bool {
+func isSharingEnabled(attachmentsType vk.MediaAttachmentType, attachment object.WallWallpostAttachment) bool {
 	switch attachmentsType {
 	case vk.VideoType:
 		return bool(attachment.Video.CanRepost)

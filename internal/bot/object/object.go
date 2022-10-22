@@ -15,17 +15,20 @@ type ContentRequestCommand struct {
 	Event   *ChatEvent
 }
 
-func (request *ContentRequestCommand) GetAttachmentsType() vk.AttachmentsType {
-	switch request.Command.GetMediaType() {
-	case model.PictureType:
-		return vk.PhotoType
-	case model.AudioType:
-		return vk.AudioType
-	case model.VideoType:
-		return vk.VideoType
-	case model.DocumentType:
-		return vk.DocumentType
+func (request *ContentRequestCommand) GetAttachmentsTypes() []vk.MediaAttachmentType {
+	var types []vk.MediaAttachmentType
+	for _, t := range request.Command.GetMediaTypes() {
+		switch t {
+		case model.PictureType:
+			types = append(types, vk.PhotoType)
+		case model.AudioType:
+			types = append(types, vk.AudioType)
+		case model.VideoType:
+			types = append(types, vk.VideoType)
+		case model.DocumentType:
+			types = append(types, vk.DocumentType)
+		}
 	}
 
-	return vk.Undefined
+	return types
 }

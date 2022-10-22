@@ -189,10 +189,15 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindById(ID int) *mo
 }
 
 func convertCsvContentCommand(csv *model.CsvContentCommand) model.ContentCommand {
+	var types []model.MediaContentType
+	for _, rawType := range strings.Split(csv.MediaContentTypes, ",") {
+		types = append(types, model.MediaContentType(rawType))
+	}
+
 	return model.NewContentCommand(
 		csv.ID,
 		strings.Split(csv.Commands, ","),
-		csv.MediaContentType,
+		types,
 		strings.Split(csv.CommunityIDs, ","),
 	)
 }
