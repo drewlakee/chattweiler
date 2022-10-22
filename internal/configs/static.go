@@ -10,7 +10,6 @@ var ChatWardenMembershipGracePeriod = NewOptionalConfig("chat.warden.membership.
 var ChatUseFirstNameInsteadUsername = NewOptionalConfig("chat.use.first.name.instead.username", "false")
 
 var PhrasesCacheRefreshInterval = NewOptionalConfig("phrases.cache.refresh.interval", "15m")
-var PhrasesSuppressLogsMissedPhrases = NewOptionalConfig("phrases.suppress.logs.missed.phrases", "false")
 
 var ContentCommandCacheRefreshInterval = NewOptionalConfig("content.command.cache.refresh.interval", "15m")
 var ContentRequestsQueueSize = NewOptionalConfig("content.requests.queue.size", "100")
