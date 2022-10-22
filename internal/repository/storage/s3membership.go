@@ -129,12 +129,14 @@ func (repo *CsvObjectStorageMembershipWarningRepository) FindAllRelevant() []mod
 		Key:    &currentKey,
 	})
 	if err != nil {
-		logging.Log.Error(
-			logPackage,
-			"CsvObjectStorageMembershipWarningRepository.FindAllRelevant",
-			err,
-			"s3 client error. bucket - %s, key - %s", repo.bucket, currentKey,
-		)
+		if !strings.Contains(err.Error(), "StatusCode: 404") {
+			logging.Log.Error(
+				logPackage,
+				"CsvObjectStorageMembershipWarningRepository.FindAllRelevant",
+				err,
+				"s3 client error. bucket - %s, key - %s", repo.bucket, currentKey,
+			)
+		}
 		return []model.MembershipWarning{}
 	}
 
