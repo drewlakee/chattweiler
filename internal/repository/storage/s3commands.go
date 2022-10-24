@@ -163,7 +163,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindByCommandAlias(a
 	ptr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&repo.cachedMapByAlias)))
 	if ptr != nil {
 		commands := *(*map[string]model.ContentCommand)(ptr)
-		if commandByAlias, exists := commands[alias]; exists {
+		if commandByAlias, exists := commands[strings.ToLower(alias)]; exists {
 			return &commandByAlias
 		}
 	}
