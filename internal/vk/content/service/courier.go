@@ -91,7 +91,8 @@ func (courier *MediaContentCourier) deliverContentResponse(
 	messageToSend["attachment"] = courier.resolveAttachmentID(mediaContent)
 	_, err := courier.communityVkApi.MessagesSend(messageToSend)
 	if err != nil {
-		logging.Log.Error(logPackage, "MediaContentCourier.deliverContentResponse", err, "message sending error")
+		logging.Log.Error(logPackage, "MediaContentCourier.deliverContentResponse", err, "message sending error. Sent params: %v", messageToSend)
+		courier.askToRetryRequest(request, user)
 	}
 }
 
@@ -117,7 +118,7 @@ func (courier *MediaContentCourier) askToRetryRequest(
 	messageToSend := vk.BuildMessageUsingPersonalizedPhrase(request.Event.PeerID, user, phrases)
 	_, err := courier.communityVkApi.MessagesSend(messageToSend)
 	if err != nil {
-		logging.Log.Error(logPackage, "MediaContentCourier.askToRetryRequest", err, "message sending error")
+		logging.Log.Error(logPackage, "MediaContentCourier.askToRetryRequest", err, "message sending error. Sent params: %v", messageToSend)
 	}
 }
 

@@ -181,7 +181,7 @@ func (bot *LongPoolingBot) handleChatUserLeavingEvent(event *object.ChatEvent) {
 	messageToSend := vk.BuildMessageUsingPersonalizedPhrase(event.PeerID, user, phrases)
 	_, err = bot.vkapi.MessagesSend(messageToSend)
 	if err != nil {
-		logging.Log.Error(logPackage, "LongPoolingBot.handleChatUserLeavingEvent", err, "message sending error")
+		logging.Log.Error(logPackage, "LongPoolingBot.handleChatUserLeavingEvent", err, "message sending error. Sent params: %v", messageToSend)
 	}
 }
 
@@ -195,7 +195,7 @@ func (bot *LongPoolingBot) handleInfoCommand(event *object.ChatEvent) {
 	messageToSend := vk.BuildMessageWithRandomPhrase(event.PeerID, phrases)
 	_, err := bot.vkapi.MessagesSend(messageToSend)
 	if err != nil {
-		logging.Log.Error(logPackage, "LongPoolingBot.handleInfoCommand", err, "message sending error")
+		logging.Log.Error(logPackage, "LongPoolingBot.handleInfoCommand", err, "message sending error. Sent params: %v", messageToSend)
 	}
 }
 

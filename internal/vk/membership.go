@@ -137,6 +137,7 @@ func (checker *Checker) checkChatForNewWarning(members map[int]object.UsersUser,
 			messageToSend := BuildMessageUsingPersonalizedPhrase(peerId, &userProfile, phrases)
 			_, err := checker.vkapi.MessagesSend(messageToSend)
 			if err != nil {
+				logging.Log.Error(logPackage, "Checker.checkChatForNewWarning", err, "message sending error. Sent params: %v", messageToSend)
 				return err
 			}
 
