@@ -73,54 +73,55 @@ type MembershipWarning struct {
 	IsRelevant     bool      `db:"is_relevant" csv:"is_relevant"`
 }
 
-// CsvContentCommand storage specific object of ContentCommand
-type CsvContentCommand struct {
-	ID                int    `csv:"id"`
-	Commands          string `csv:"commands"`
-	MediaContentTypes string `csv:"media_types"`
-	CommunityIDs      string `csv:"community_ids"`
+// CsvCommand storage specific object of Command
+type CsvCommand struct {
+	ID                int         `csv:"id"`
+	Commands          string      `csv:"commands"`
+	Type              CommandType `csv:"command_type"`
+	MediaContentTypes string      `csv:"media_types"`
+	CommunityIDs      string      `csv:"community_ids"`
 }
 
-// ContentCommand domain object
-type ContentCommand struct {
-	id int
+// Command domain object
+type Command struct {
+	ID int
+
+	Type CommandType
 
 	// aliases to call for request (e.g. "sing", "song" are refer to one command)
-	commandsList []string
+	Aliases []string
 
+	ContentDescriptor ContentDescriptor
+}
+
+type ContentDescriptor struct {
 	// media content type which command supposed to deliver on call
-	mediaContentType []MediaContentType
+	MediaContentType []MediaContentType
 
 	// communities that are able for command to use as content sources
-	communityIDsList []string
+	CommunitySourceIDs []string
 }
 
-func (contentCommand ContentCommand) GetAliases() []string {
-	return contentCommand.commandsList
-}
-
-func (contentCommand ContentCommand) GetMediaTypes() []MediaContentType {
-	return contentCommand.mediaContentType
-}
-
-func (contentCommand ContentCommand) GetID() int {
-	return contentCommand.id
-}
-
-func (contentCommand ContentCommand) GetCommunityIDs() []string {
-	return contentCommand.communityIDsList
-}
-
-func NewContentCommand(
+func NewCommand(
 	id int,
+	commandType CommandType,
 	commands []string,
 	mediaContentType []MediaContentType,
 	communityIDs []string,
-) ContentCommand {
-	return ContentCommand{
-		id:               id,
-		commandsList:     commands,
-		mediaContentType: mediaContentType,
-		communityIDsList: communityIDs,
+) Command {
+	var command Command
+
+	command.ID = id
+	command.Aliases = commands
+	command.Type = commandType
+
+	switch commandType {
+	case ContentCommand:
+		command.ContentDescriptor = ContentDescriptor{
+			MediaContentType:   mediaContentType,
+			CommunitySourceIDs: communityIDs,
+		}
 	}
+
+	return command
 }

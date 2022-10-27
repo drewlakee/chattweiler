@@ -19,3 +19,10 @@ const (
 	VideoType    MediaContentType = "video"
 	DocumentType MediaContentType = "doc"
 )
+
+type CommandType string
+
+const (
+	InfoCommand    CommandType = "info"
+	ContentCommand CommandType = "content"
+)

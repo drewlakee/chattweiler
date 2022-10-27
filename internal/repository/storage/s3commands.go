@@ -24,9 +24,9 @@ type CsvObjectStorageCachedContentCommandRepository struct {
 	refreshMutex         sync.Mutex
 
 	maxCommandAliasStringLength int
-	cachedList                  []model.ContentCommand
-	cachedMapByAlias            map[string]model.ContentCommand
-	cachedMapByID               map[int]model.ContentCommand
+	cachedList                  []model.Command
+	cachedMapByAlias            map[string]model.Command
+	cachedMapByID               map[int]model.Command
 }
 
 func NewCsvObjectStorageCachedContentSourceRepository(client *s3.Client, bucket, key string, cacheRefreshInterval time.Duration) *CsvObjectStorageCachedContentCommandRepository {
@@ -71,7 +71,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) refreshCache() error
 		return err
 	}
 
-	var csvContentCommands []model.CsvContentCommand
+	var csvCommands []model.CsvCommand
 	csvFile, err := io.ReadAll(object.Body)
 	if err != nil {
 		logging.Log.Error(
@@ -83,7 +83,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) refreshCache() error
 		return err
 	}
 
-	err = csvutil.Unmarshal(csvFile, &csvContentCommands)
+	err = csvutil.Unmarshal(csvFile, &csvCommands)
 	if err != nil {
 		logging.Log.Error(
 			logPackage,
@@ -94,23 +94,23 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) refreshCache() error
 		return err
 	}
 
-	var list []model.ContentCommand
-	for _, csv := range csvContentCommands {
+	var list []model.Command
+	for _, csv := range csvCommands {
 		command := convertCsvContentCommand(&csv)
-		for _, alias := range command.GetAliases() {
+		for _, alias := range command.Aliases {
 			repo.maxCommandAliasStringLength = utils.MaxInt(repo.maxCommandAliasStringLength, len(alias))
 		}
 		list = append(list, command)
 	}
 
-	var mapByID = make(map[int]model.ContentCommand, len(list))
+	var mapByID = make(map[int]model.Command, len(list))
 	for _, command := range list {
-		mapByID[command.GetID()] = command
+		mapByID[command.ID] = command
 	}
 
-	var mapByAlias = make(map[string]model.ContentCommand, len(list))
+	var mapByAlias = make(map[string]model.Command, len(list))
 	for _, command := range list {
-		for _, alias := range command.GetAliases() {
+		for _, alias := range command.Aliases {
 			mapByAlias[strings.ToLower(alias)] = command
 		}
 	}
@@ -129,26 +129,26 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) refreshCache() error
 	return nil
 }
 
-func (repo *CsvObjectStorageCachedContentCommandRepository) FindAll() []model.ContentCommand {
+func (repo *CsvObjectStorageCachedContentCommandRepository) FindAll() []model.Command {
 	if repo.isNeededInvalidateCache() {
 		err := repo.refreshCache()
 		if err != nil {
-			return []model.ContentCommand{}
+			return []model.Command{}
 		}
 	}
 
 	ptr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&repo.cachedList)))
 	if ptr != nil {
-		commands := *(*[]model.ContentCommand)(ptr)
+		commands := *(*[]model.Command)(ptr)
 		if len(commands) != 0 {
 			return commands
 		}
 	}
 
-	return []model.ContentCommand{}
+	return []model.Command{}
 }
 
-func (repo *CsvObjectStorageCachedContentCommandRepository) FindByCommandAlias(alias string) *model.ContentCommand {
+func (repo *CsvObjectStorageCachedContentCommandRepository) FindByCommandAlias(alias string) *model.Command {
 	if len(alias) > repo.maxCommandAliasStringLength {
 		return nil
 	}
@@ -162,7 +162,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindByCommandAlias(a
 
 	ptr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&repo.cachedMapByAlias)))
 	if ptr != nil {
-		commands := *(*map[string]model.ContentCommand)(ptr)
+		commands := *(*map[string]model.Command)(ptr)
 		if commandByAlias, exists := commands[strings.ToLower(alias)]; exists {
 			return &commandByAlias
 		}
@@ -170,7 +170,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindByCommandAlias(a
 	return nil
 }
 
-func (repo *CsvObjectStorageCachedContentCommandRepository) FindById(ID int) *model.ContentCommand {
+func (repo *CsvObjectStorageCachedContentCommandRepository) FindById(ID int) *model.Command {
 	if repo.isNeededInvalidateCache() {
 		err := repo.refreshCache()
 		if err != nil {
@@ -180,7 +180,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindById(ID int) *mo
 
 	contentSourcesPtr := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&repo.cachedMapByID)))
 	if contentSourcesPtr != nil {
-		commands := *(*map[int]model.ContentCommand)(contentSourcesPtr)
+		commands := *(*map[int]model.Command)(contentSourcesPtr)
 		if commandById, exists := commands[ID]; exists {
 			return &commandById
 		}
@@ -188,14 +188,15 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindById(ID int) *mo
 	return nil
 }
 
-func convertCsvContentCommand(csv *model.CsvContentCommand) model.ContentCommand {
+func convertCsvContentCommand(csv *model.CsvCommand) model.Command {
 	var types []model.MediaContentType
 	for _, rawType := range strings.Split(csv.MediaContentTypes, ",") {
 		types = append(types, model.MediaContentType(rawType))
 	}
 
-	return model.NewContentCommand(
+	return model.NewCommand(
 		csv.ID,
+		csv.Type,
 		strings.Split(csv.Commands, ","),
 		types,
 		strings.Split(csv.CommunityIDs, ","),

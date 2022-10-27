@@ -16,7 +16,7 @@ type MembershipWarningRepository interface {
 }
 
 type ContentCommandRepository interface {
-	FindAll() []model.ContentCommand
-	FindByCommandAlias(command string) *model.ContentCommand
-	FindById(ID int) *model.ContentCommand
+	FindAll() []model.Command
+	FindByCommandAlias(command string) *model.Command
+	FindById(ID int) *model.Command
 }

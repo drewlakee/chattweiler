@@ -11,13 +11,13 @@ type ChatEvent struct {
 }
 
 type ContentRequestCommand struct {
-	Command *model.ContentCommand
+	Command *model.Command
 	Event   *ChatEvent
 }
 
 func (request *ContentRequestCommand) GetAttachmentsTypes() []vk.MediaAttachmentType {
 	var types []vk.MediaAttachmentType
-	for _, t := range request.Command.GetMediaTypes() {
+	for _, t := range request.Command.ContentDescriptor.MediaContentType {
 		switch t {
 		case model.PictureType:
 			types = append(types, vk.PhotoType)

@@ -73,7 +73,7 @@ func (collector *CachedRandomAttachmentsContentCollector) getAndRemoveCachedAtta
 
 func (collector *CachedRandomAttachmentsContentCollector) refreshCacheDifference(attachmentType vk.MediaAttachmentType) {
 	contentCommand := collector.contentSourceRepo.FindById(collector.contentCommandId)
-	randomVkCommunity := collector.getCommunity(contentCommand.GetCommunityIDs())
+	randomVkCommunity := collector.getCommunity(contentCommand.ContentDescriptor.CommunitySourceIDs)
 
 	count, err := vk.GetWallPostsCount(collector.client, randomVkCommunity)
 	if err != nil {

@@ -21,7 +21,7 @@ func NewChatEventFromNewMessage(message wrapper.NewMessage) *object.ChatEvent {
 	}
 }
 
-func NewContentCommandRequest(command *model.ContentCommand, message wrapper.NewMessage) *object.ContentRequestCommand {
+func NewContentCommandRequest(command *model.Command, message wrapper.NewMessage) *object.ContentRequestCommand {
 	return &object.ContentRequestCommand{
 		Command: command,
 		Event: &object.ChatEvent{
