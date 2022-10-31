@@ -98,7 +98,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) refreshCache() error
 	for _, csv := range csvCommands {
 		command := convertCsvContentCommand(&csv)
 		for _, alias := range command.Aliases {
-			repo.maxCommandAliasStringLength = utils.MaxInt(repo.maxCommandAliasStringLength, len(alias))
+			repo.maxCommandAliasStringLength = utils.Max[int](repo.maxCommandAliasStringLength, len(alias))
 		}
 		list = append(list, command)
 	}

@@ -121,7 +121,7 @@ func (collector *CachedRandomAttachmentsContentCollector) getRandomWallPostsOffs
 	if (wallPostsCount - randomSequenceFetchOffset) < maxContentFetchBound {
 		randomSequenceFetchOffset -= maxContentFetchBound - (wallPostsCount - randomSequenceFetchOffset)
 	}
-	return utils.ClampInt(randomSequenceFetchOffset, 0, wallPostsCount)
+	return utils.Clamp[int](randomSequenceFetchOffset, 0, wallPostsCount)
 }
 
 func (collector *CachedRandomAttachmentsContentCollector) fetchContentSequence(
