@@ -137,7 +137,7 @@ func (bot *LongPoolingBot) Serve() {
 	// run async
 	bot.startMembershipCheckingAsync()
 
-	logging.Log.Info(logPackage, "LongPoolingBot.Serve", "Bot is running...")
+	logging.Log.Info(logPackage, "LongPoolingBot.Serve", "bot is on air")
 	err := bot.vklp.Run()
 	panicIfError(err, "LongPoolingBot.Serve", "bot is crashed")
 }
