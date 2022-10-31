@@ -15,13 +15,13 @@ func TestSpinWithEmptyPhrases(t *testing.T) {
 }
 
 func TestSpinWithOnePhrase(t *testing.T) {
-	phrase := model.PhraseCsv{}
+	phrase := model.Phrase{}
 	phrase.Text = "first phrase"
 	phrase.Weight = 100
 
 	bingo := Spin(phrase)
 
-	if bingo != phrase {
+	if *bingo != phrase {
 		t.Errorf("Spin result with a single phrase not the same")
 	}
 }

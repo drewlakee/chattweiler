@@ -5,19 +5,7 @@ import (
 	"time"
 )
 
-type Phrase interface {
-	GetID() int
-	GetWeight() int
-	GetPhraseType() PhraseType
-	UserTemplated() bool
-	HasAudioAccompaniment() bool
-	GetVkAudioId() string
-	HasGifAccompaniment() bool
-	GetVkGifId() string
-	GetText() string
-}
-
-type PhraseCsv struct {
+type Phrase struct {
 	PhraseID   int        `csv:"phrase_id"`
 	Weight     int        `csv:"weight"`
 	PhraseType PhraseType `csv:"phrase_type"`
@@ -26,42 +14,18 @@ type PhraseCsv struct {
 	Text       string     `csv:"text"`
 }
 
-func (p PhraseCsv) GetID() int {
-	return p.PhraseID
-}
-
-func (p PhraseCsv) GetWeight() int {
-	return p.Weight
-}
-
-func (p PhraseCsv) GetPhraseType() PhraseType {
-	return p.PhraseType
-}
-
-func (p PhraseCsv) UserTemplated() bool {
+func (p Phrase) UserTemplated() bool {
 	return strings.Contains(p.Text, "%username%")
 }
 
-func (p PhraseCsv) HasAudioAccompaniment() bool {
+func (p Phrase) HasAudioAccompaniment() bool {
 	id := strings.TrimSpace(p.VkAudioId)
 	return id != "" && !strings.EqualFold(id, "null")
 }
 
-func (p PhraseCsv) GetVkAudioId() string {
-	return p.VkAudioId
-}
-
-func (p PhraseCsv) GetText() string {
-	return p.Text
-}
-
-func (p PhraseCsv) HasGifAccompaniment() bool {
+func (p Phrase) HasGifAccompaniment() bool {
 	id := strings.TrimSpace(p.VkGifId)
 	return id != "" && !strings.EqualFold(id, "null")
-}
-
-func (p PhraseCsv) GetVkGifId() string {
-	return p.VkGifId
 }
 
 type MembershipWarning struct {

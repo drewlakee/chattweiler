@@ -9,14 +9,14 @@ import (
 	"time"
 )
 
-func Spin(phrases ...model.Phrase) model.Phrase {
+func Spin(phrases ...model.Phrase) *model.Phrase {
 	if len(phrases) == 0 {
 		return nil
 	}
 
 	totalWeight := 0
 	for _, phrase := range phrases {
-		totalWeight += phrase.GetWeight()
+		totalWeight += phrase.Weight
 	}
 
 	if totalWeight == 0 {
@@ -31,18 +31,18 @@ func Spin(phrases ...model.Phrase) model.Phrase {
 
 	if direction == 1 {
 		for _, phrase := range phrases {
-			bingo -= phrase.GetWeight()
+			bingo -= phrase.Weight
 			if bingo <= 0 {
-				return phrase
+				return &phrase
 			}
 		}
 	} else {
 		index := len(phrases) - 1
 		for index >= 0 {
 			phrase := phrases[index]
-			bingo -= phrase.GetWeight()
+			bingo -= phrase.Weight
 			if bingo <= 0 {
-				return phrase
+				return &phrase
 			}
 			index--
 		}

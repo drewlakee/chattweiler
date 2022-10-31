@@ -40,12 +40,12 @@ func BuildMessageUsingPersonalizedPhrase(
 
 	if phrase.UserTemplated() {
 		if useFirstNameInsteadUsername {
-			builder.Message(strings.ReplaceAll(phrase.GetText(), "%username%", fmt.Sprintf("@%s (%s)", user.ScreenName, user.FirstName)))
+			builder.Message(strings.ReplaceAll(phrase.Text, "%username%", fmt.Sprintf("@%s (%s)", user.ScreenName, user.FirstName)))
 		} else {
-			builder.Message(strings.ReplaceAll(phrase.GetText(), "%username%", "@"+user.ScreenName))
+			builder.Message(strings.ReplaceAll(phrase.Text, "%username%", "@"+user.ScreenName))
 		}
 	} else {
-		builder.Message(fmt.Sprintf("%s, \n\n%s", "@"+user.ScreenName, phrase.GetText()))
+		builder.Message(fmt.Sprintf("%s, \n\n%s", "@"+user.ScreenName, phrase.Text))
 	}
 
 	appendAttachments(phrase, builder)
@@ -57,20 +57,20 @@ func BuildMessageWithRandomPhrase(peerId int, phrases []model.Phrase) api.Params
 	builder := params.NewMessagesSendBuilder()
 	builder.PeerID(peerId)
 	builder.RandomID(0)
-	builder.Message(phrase.GetText())
+	builder.Message(phrase.Text)
 	appendAttachments(phrase, builder)
 	return builder.Params
 }
 
-func appendAttachments(phrase model.Phrase, builder *params.MessagesSendBuilder) {
+func appendAttachments(phrase *model.Phrase, builder *params.MessagesSendBuilder) {
 	var attachments []string
 
 	if phrase.HasAudioAccompaniment() {
-		attachments = append(attachments, phrase.GetVkAudioId())
+		attachments = append(attachments, phrase.VkAudioId)
 	}
 
 	if phrase.HasGifAccompaniment() {
-		attachments = append(attachments, phrase.GetVkGifId())
+		attachments = append(attachments, phrase.VkGifId)
 	}
 
 	if len(attachments) != 0 {

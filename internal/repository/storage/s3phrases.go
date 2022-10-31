@@ -71,7 +71,7 @@ func (repo *CsvObjectStorageCachedPhraseRepository) refreshCache() error {
 		return err
 	}
 
-	var csvPhrases []model.PhraseCsv
+	var csvPhrases []model.Phrase
 	err = csvutil.Unmarshal(csvFile, &csvPhrases)
 	if err != nil {
 		logging.Log.Error(logPackage, "CsvObjectStorageCachedPhraseRepository.refreshCache", err, "csv file parsing error")
@@ -82,7 +82,7 @@ func (repo *CsvObjectStorageCachedPhraseRepository) refreshCache() error {
 
 	var mapByType = make(map[model.PhraseType][]model.Phrase)
 	for _, phrase := range list {
-		mapByType[phrase.GetPhraseType()] = append(mapByType[phrase.GetPhraseType()], phrase)
+		mapByType[phrase.PhraseType] = append(mapByType[phrase.PhraseType], phrase)
 	}
 
 	listPtr := unsafe.Pointer(&list)
@@ -147,7 +147,7 @@ func isTheSameDate(first, second time.Time) bool {
 	return true
 }
 
-func convertCsvPhrases(phrases []model.PhraseCsv) []model.Phrase {
+func convertCsvPhrases(phrases []model.Phrase) []model.Phrase {
 	result := make([]model.Phrase, len(phrases))
 	for index, value := range phrases {
 		result[index] = value
