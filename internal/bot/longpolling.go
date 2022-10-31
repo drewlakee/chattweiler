@@ -33,7 +33,6 @@ type LongPoolingBot struct {
 	contentCommandInputChannel chan *object.ContentRequestCommand
 	contentCourier             *service.MediaContentCourier
 
-	infoCommand                     string
 	welcomeNewMembersFeatureEnabled bool
 	goodbyeMembersFeatureEnabled    bool
 	contentRequestsFeatureEnabled   bool
@@ -75,8 +74,6 @@ func NewLongPoolingBot(
 	contentRequestsFeatureEnabled, err := strconv.ParseBool(utils.GetEnvOrDefault(configs.BotFunctionalityContentCommands))
 	panicIfError(err, "NewLongPoolingBot", "%s: parsing of env variable is failed", configs.BotFunctionalityContentCommands.Key)
 
-	infoCommand := utils.GetEnvOrDefault(configs.BotCommandOverrideInfo)
-
 	contentRequestsInputChannel := make(chan *object.ContentRequestCommand, requestsQueueSize)
 
 	garbageCollectorsCleaningInterval, err := time.ParseDuration(utils.GetEnvOrDefault(configs.ContentGarbageCollectorsCleaningInterval))
@@ -99,7 +96,6 @@ func NewLongPoolingBot(
 		welcomeNewMembersFeatureEnabled: welcomeNewMembersFeatureEnabled,
 		goodbyeMembersFeatureEnabled:    goodbyeMembersFeatureEnabled,
 		contentRequestsFeatureEnabled:   contentRequestsFeatureEnabled,
-		infoCommand:                     infoCommand,
 	}
 }
 

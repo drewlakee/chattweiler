@@ -35,5 +35,5 @@ func (config MandatoryConfig) GetKey() string {
 }
 
 func (config MandatoryConfig) GetDefaultValue() string {
-	return ""
+	panic("mandatory configuration must be specified manually")
 }
