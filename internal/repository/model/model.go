@@ -29,12 +29,12 @@ func (p Phrase) HasGifAccompaniment() bool {
 }
 
 type MembershipWarning struct {
-	WarningID      int       `db:"warning_id" csv:"warning_id"`
-	UserID         int       `db:"user_id" csv:"user_id"`
-	Username       string    `db:"username" csv:"username"`
-	FirstWarningTs time.Time `db:"first_warning_ts" csv:"first_warning_ts"`
-	GracePeriod    string    `db:"grace_period" csv:"grace_period"`
-	IsRelevant     bool      `db:"is_relevant" csv:"is_relevant"`
+	WarningID      int       `csv:"warning_id"`
+	UserID         int       `csv:"user_id"`
+	Username       string    `csv:"username"`
+	FirstWarningTs time.Time `csv:"first_warning_ts"`
+	GracePeriod    string    `csv:"grace_period"`
+	IsRelevant     bool      `csv:"is_relevant"`
 }
 
 // CsvCommand storage specific object of Command
