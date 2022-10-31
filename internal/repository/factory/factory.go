@@ -90,8 +90,8 @@ func createCsvObjectStorageCachedPhraseRepository() *storage.CsvObjectStorageCac
 	)
 }
 
-func CreateContentSourceRepository(repoType StorageType) repository.ContentCommandRepository {
-	var repo repository.ContentCommandRepository
+func CreateContentSourceRepository(repoType StorageType) repository.CommandsRepository {
+	var repo repository.CommandsRepository
 	switch repoType {
 	case CsvYandexObjectStorage:
 		fallthrough
@@ -102,18 +102,18 @@ func CreateContentSourceRepository(repoType StorageType) repository.ContentComma
 	return repo
 }
 
-func createCsvObjectStorageCachedContentSourceRepository() *storage.CsvObjectStorageCachedContentCommandRepository {
+func createCsvObjectStorageCachedContentSourceRepository() *storage.CsvObjectStorageCachedCommandRepository {
 	cacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault(configs.ContentCommandCacheRefreshInterval))
 	if err != nil {
 		logging.Log.Panic(
 			logPackage,
-			"CsvObjectStorageCachedContentCommandRepository.createCsvObjectStorageCachedContentSourceRepository",
+			"CsvObjectStorageCachedCommandRepository.createCsvObjectStorageCachedContentSourceRepository",
 			err,
 			configs.ContentCommandCacheRefreshInterval.Key+": parsing of env variable is failed",
 		)
 	}
 
-	return storage.NewCsvObjectStorageCachedContentSourceRepository(
+	return storage.NewCsvObjectStorageCachedCommandsRepository(
 		getObjectStorageClient(),
 		utils.MustGetEnv(configs.YandexObjectStorageContentSourceBucket),
 		utils.MustGetEnv(configs.YandexObjectStorageContentSourceBucketKey),

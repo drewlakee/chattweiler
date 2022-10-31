@@ -15,7 +15,7 @@ import (
 	"unsafe"
 )
 
-type CsvObjectStorageCachedContentCommandRepository struct {
+type CsvObjectStorageCachedCommandRepository struct {
 	client               *s3.Client
 	bucket               string
 	key                  string
@@ -29,8 +29,8 @@ type CsvObjectStorageCachedContentCommandRepository struct {
 	cachedMapByID               map[int]model.Command
 }
 
-func NewCsvObjectStorageCachedContentSourceRepository(client *s3.Client, bucket, key string, cacheRefreshInterval time.Duration) *CsvObjectStorageCachedContentCommandRepository {
-	repository := CsvObjectStorageCachedContentCommandRepository{
+func NewCsvObjectStorageCachedCommandsRepository(client *s3.Client, bucket, key string, cacheRefreshInterval time.Duration) *CsvObjectStorageCachedCommandRepository {
+	repository := CsvObjectStorageCachedCommandRepository{
 		client:               client,
 		bucket:               bucket,
 		key:                  key,
@@ -46,11 +46,11 @@ func NewCsvObjectStorageCachedContentSourceRepository(client *s3.Client, bucket,
 	return &repository
 }
 
-func (repo *CsvObjectStorageCachedContentCommandRepository) isNeededInvalidateCache() bool {
+func (repo *CsvObjectStorageCachedCommandRepository) isNeededInvalidateCache() bool {
 	return time.Now().After(repo.lastCacheRefresh.Add(repo.cacheRefreshInterval))
 }
 
-func (repo *CsvObjectStorageCachedContentCommandRepository) refreshCache() error {
+func (repo *CsvObjectStorageCachedCommandRepository) refreshCache() error {
 	startTime := time.Now().UnixMilli()
 
 	// cache refresh lock
@@ -64,7 +64,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) refreshCache() error
 	if err != nil {
 		logging.Log.Error(
 			logPackage,
-			"CsvObjectStorageCachedContentCommandRepository.refreshCache",
+			"CsvObjectStorageCachedCommandRepository.refreshCache",
 			err,
 			"s3 client error: bucket - %s, key - %s", repo.bucket, repo.key,
 		)
@@ -76,7 +76,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) refreshCache() error
 	if err != nil {
 		logging.Log.Error(
 			logPackage,
-			"CsvObjectStorageCachedContentCommandRepository.refreshCache",
+			"CsvObjectStorageCachedCommandRepository.refreshCache",
 			err,
 			"csv file reading error",
 		)
@@ -87,7 +87,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) refreshCache() error
 	if err != nil {
 		logging.Log.Error(
 			logPackage,
-			"CsvObjectStorageCachedContentCommandRepository.refreshCache",
+			"CsvObjectStorageCachedCommandRepository.refreshCache",
 			err,
 			"csv file parsing error",
 		)
@@ -125,11 +125,11 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) refreshCache() error
 	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&repo.cachedMapByID)), mapByIdPtr)
 
 	repo.lastCacheRefresh = time.Now()
-	logging.Log.Info(logPackage, "CsvObjectStorageCachedContentCommandRepository.refreshCache", "Cache successfully updated for %d ms", time.Now().UnixMilli()-startTime)
+	logging.Log.Info(logPackage, "CsvObjectStorageCachedCommandRepository.refreshCache", "Cache successfully updated for %d ms", time.Now().UnixMilli()-startTime)
 	return nil
 }
 
-func (repo *CsvObjectStorageCachedContentCommandRepository) FindAll() []model.Command {
+func (repo *CsvObjectStorageCachedCommandRepository) FindAll() []model.Command {
 	if repo.isNeededInvalidateCache() {
 		err := repo.refreshCache()
 		if err != nil {
@@ -148,7 +148,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindAll() []model.Co
 	return []model.Command{}
 }
 
-func (repo *CsvObjectStorageCachedContentCommandRepository) FindByCommandAlias(alias string) *model.Command {
+func (repo *CsvObjectStorageCachedCommandRepository) FindByCommandAlias(alias string) *model.Command {
 	if len(alias) > repo.maxCommandAliasStringLength {
 		return nil
 	}
@@ -170,7 +170,7 @@ func (repo *CsvObjectStorageCachedContentCommandRepository) FindByCommandAlias(a
 	return nil
 }
 
-func (repo *CsvObjectStorageCachedContentCommandRepository) FindById(ID int) *model.Command {
+func (repo *CsvObjectStorageCachedCommandRepository) FindById(ID int) *model.Command {
 	if repo.isNeededInvalidateCache() {
 		err := repo.refreshCache()
 		if err != nil {

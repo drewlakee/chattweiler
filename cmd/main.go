@@ -23,13 +23,8 @@ func main() {
 		membershipWarnings = nil
 	}
 
-	var commands repository.ContentCommandRepository
-	if utils.MustGetEnv(configs.BotFunctionalityContentCommands) == "true" {
-		logging.Log.Info("main", "main", "creating and checking commands repository...")
-		commands = factory.CreateContentSourceRepository(factory.CsvYandexObjectStorage)
-	} else {
-		commands = nil
-	}
+	logging.Log.Info("main", "main", "creating and checking commands repository...")
+	commands := factory.CreateContentSourceRepository(factory.CsvYandexObjectStorage)
 
 	logging.Log.Info("main", "main", "creating bot instance...")
 	bot.NewLongPoolingBot(phrases, membershipWarnings, commands).Serve()

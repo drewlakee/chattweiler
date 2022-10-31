@@ -26,7 +26,7 @@ type LongPoolingBot struct {
 	vklpwrapper *wrapper.Wrapper
 
 	phrasesRepo        repository.PhraseRepository
-	contentCommandRepo repository.ContentCommandRepository
+	contentCommandRepo repository.CommandsRepository
 
 	membershipChecker *vk.Checker
 
@@ -41,7 +41,7 @@ type LongPoolingBot struct {
 func NewLongPoolingBot(
 	phrasesRepo repository.PhraseRepository,
 	membershipWarningsRepo repository.MembershipWarningRepository,
-	contentCommandRepo repository.ContentCommandRepository,
+	contentCommandRepo repository.CommandsRepository,
 ) *LongPoolingBot {
 	vkBotToken := utils.MustGetEnv(configs.VkCommunityBotToken)
 	communityVkApi := api.NewVK(vkBotToken)

@@ -17,7 +17,7 @@ type MediaContentCourier struct {
 	communityVkApi          *api.VK
 	userVkApi               *api.VK
 	phrasesRepo             repository.PhraseRepository
-	contentCommandRepo      repository.ContentCommandRepository
+	contentCommandRepo      repository.CommandsRepository
 	listeningChannel        chan *botobject.ContentRequestCommand
 	commandCollectors       map[int]content.AttachmentsContentCollector
 	garbageCleaningInterval time.Duration
@@ -28,7 +28,7 @@ func NewMediaContentCourier(
 	communityVkApi,
 	userVkApi *api.VK,
 	phrasesRepo repository.PhraseRepository,
-	contentCommandRepo repository.ContentCommandRepository,
+	contentCommandRepo repository.CommandsRepository,
 	listeningChannel chan *botobject.ContentRequestCommand,
 	garbageCleaningInterval time.Duration,
 ) *MediaContentCourier {

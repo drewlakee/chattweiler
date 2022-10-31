@@ -16,7 +16,7 @@ import (
 type CachedRandomAttachmentsContentCollector struct {
 	client               *api.VK
 	contentCommandId     int
-	contentSourceRepo    repository.ContentCommandRepository
+	contentSourceRepo    repository.CommandsRepository
 	cachedAttachments    map[vk.MediaAttachmentType][]content.MediaAttachment
 	maxContentFetchBound int
 	attachmentTypes      []vk.MediaAttachmentType
@@ -26,7 +26,7 @@ func NewCachedRandomAttachmentsContentCollector(
 	client *api.VK,
 	attachmentTypes []vk.MediaAttachmentType,
 	contentCommandId int,
-	contentSourceRepo repository.ContentCommandRepository,
+	contentSourceRepo repository.CommandsRepository,
 ) *CachedRandomAttachmentsContentCollector {
 	return &CachedRandomAttachmentsContentCollector{
 		client:            client,
