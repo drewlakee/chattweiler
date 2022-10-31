@@ -7,7 +7,6 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.16.3
 	github.com/aws/aws-sdk-go-v2/config v1.15.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.26.9
-	github.com/jmoiron/sqlx v1.3.4
 	github.com/jszwec/csvutil v1.6.0
 	github.com/lib/pq v1.2.0
 	github.com/sirupsen/logrus v1.8.1
