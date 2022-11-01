@@ -235,7 +235,7 @@ Read [the documentation](https://cloud.yandex.com/en-ru/docs/storage/) how to ge
 5. Make fun out of it 👾
 
 <details>
-  <summary>Usage examples</summary>
+  <summary><b>Usage examples</b></summary>
   
 ![Screenshot 2022-10-31 at 16-11-04 Messenger](https://user-images.githubusercontent.com/44072343/199244389-1d16c36d-5136-4223-b8c8-959e29da4aeb.png)
   
