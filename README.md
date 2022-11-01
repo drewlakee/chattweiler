@@ -232,5 +232,15 @@ Read [the documentation](https://cloud.yandex.com/en-ru/docs/storage/) how to ge
 2. Build a docker image `./chattweiler/build.sh`
 3. Create a configuration file `touch bot.env` and fill the mandatory variables
 4. Run a container with the image you've just built `./chattweiler/run.sh`
+5. Make fun out of it 👾
+
+<details>
+  <summary>Usage examples</summary>
+  
+![Screenshot 2022-10-31 at 16-11-04 Messenger](https://user-images.githubusercontent.com/44072343/199244389-1d16c36d-5136-4223-b8c8-959e29da4aeb.png)
+  
+![Screenshot 2022-10-31 at 16-13-06 Messenger](https://user-images.githubusercontent.com/44072343/199244378-b49e6aa0-7d94-41a7-b723-da94ed4d7ec5.png)
+
+</details>
 
 ** If you are supposed to use file logging, you can make a volume by adding to the command in `./chattweiler/run.sh` a piece of settings `docker run -v /path/to/your/log/directory:/application/logs ...`
