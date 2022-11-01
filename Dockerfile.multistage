@@ -5,12 +5,10 @@ FROM golang:alpine3.15 AS builder
 
 WORKDIR /builder
 
-COPY go.mod ./
-COPY go.sum ./
-RUN go mod download
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
 
 COPY ./ ./
-
 RUN CGO_ENABLED=0 GOOS=linux go build -o ./chattweiler ./cmd/main.go
 
 ##
@@ -18,7 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o ./chattweiler ./cmd/main.go
 ##
 FROM gcr.io/distroless/base-debian11
 
-WORKDIR /deploy
+WORKDIR /application
 
 COPY --from=builder ./builder/chattweiler ./chattweiler
 

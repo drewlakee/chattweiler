@@ -1,189 +1,246 @@
 <div align="center">
-    <img src="https://user-images.githubusercontent.com/44072343/155874103-b1757bd9-0b31-4e8c-8a74-bdf372f71ef5.png" width="250" height="200" alt="logo">
+    <img src="https://user-images.githubusercontent.com/44072343/199232272-f6270d6c-816c-4c52-a8ae-b0fca8b6d16d.png" width="500" alt="logo">
 </div>
 
-# Description
+# Chattweiler
 
-Chattweiler is a chat bot for Vkontankte. Briefly say, it takes care of a chat.
+Chattweiler is a server-side application that handles events which come from VK community chat
 
-# Bot's Features
+Inspirations for the development are:
+- Requesting of content from custom sources
+- Customized responses
+- Fake users filtering
+- Forcing to join a community, in case, if you're wanting to be a part of a chat
+- Fun 🤖
 
-<details>
-   <summary><b>Controls new chat joins: welcomes new members</b></summary><br>
-   
-   You also can configure some audio with a welcome phrase. See "PostgreSQL Diagrams" for details
-   
-   <img src="https://user-images.githubusercontent.com/44072343/160234699-3699973e-615e-40eb-811a-a7a790cd8288.png" alt="hello new member example">
-</details>
+## Features
 
-<details>
-   <summary><b>Controls chat leavings: says goodbye</b></summary><br>
-   <img src="https://user-images.githubusercontent.com/44072343/160234884-090b99e2-102e-43aa-ae0a-18bf8a66c191.png" alt="goodbye member example">
-</details>
+- Customized chat responses for chat joins, leavings, warnings, failed commands etc.
+- Customized commands for content (e.g. pictures, audio, videos)
+- Automatic membership checking and warning
 
-<details>
-   <summary><b>Controls a membership at a chat's community: makes warnings and kicks if people don't care about it</b></summary><br>
-   <img src="https://user-images.githubusercontent.com/44072343/160234979-5b19ee74-2be6-44a3-95eb-9193f2d38086.png" alt="warning for member example">
-</details>
+## Application context schema
 
-<details>
-   <summary><b>Can send a random content to the chat</b></summary><br>
-   
-   The commands' names could be overridden. See "Configurations" for details
-   
-   <img src="https://user-images.githubusercontent.com/44072343/160235262-31cda1b1-e880-4c06-8676-edb1f00f598e.png" alt="picture command example"><br>
-   <img src="https://user-images.githubusercontent.com/44072343/160235343-05e81966-a5b7-4658-b5b8-81565f4bf2a6.png" alt="audio command example">
-</details>
+<div align="center">
+    <img src="https://user-images.githubusercontent.com/44072343/199017712-79e20846-a071-4bbc-8c78-8acfe6e1f1b4.jpg" alt="logo">
+</div>
 
-# Development Stack
+As you might already have noticed the application uses for storage [Yandex Object Storage](https://cloud.yandex.com/en-ru/services/storage) solution, 
+so for using the application you have to have access to such resource. Storage configuration for the application is mentioned further in Quickstart.
 
-- Golang
+In brief, the application operates over csv files that are stored in cloud. That type of file is picked up because it's very straightforward to store and edit.
+The application caches these files and invalidates over time. That way makes positive effect on performance during events handling.
 
-- PostgreSQL
+# Quickstart
+## Application deployment preparations
+### Setting up a community chat
 
-# PostgreSQL Diagrams
+1. Create a public community in [VK](https://vk.com)
+2. Create a new chat inside the community: Manage > Chats > Create Chat
+3. Once you got to a page of the chat, remember the chat's number (e.g. 9)
 
-<img src="https://user-images.githubusercontent.com/44072343/160235542-063309c1-1d4e-46af-b8b3-7050a7f403ae.png" alt="diagrams">
-<br>
+![Screenshot 2022-10-31 165551](https://user-images.githubusercontent.com/44072343/199024841-a4da7cb9-829d-43ed-9abc-df60378b124f.png)
 
-<details>
-    <summary><b>phrase_type</b></summary><br>
-    
-Phrases could have different types.
+### Setting up a Yandex Object Storage
 
-By default the application uses these types:
+The application uses several [buckets](https://console.cloud.yandex.com/folders): 
 
-- `welcome`
-- `goodbye`
-- `membership_warning`
-- `info`
-- `audio_request`
-- `picture_request`
-    
-</details>
+- commands
+  - commands_production.csv
+- membership-warnings (optional, used automatically by the application if so configured)
+- phrases
+  - phrases_production.csv
 
-<details>
-    <summary><b>phrase</b></summary><br>
-    
-- `text` is an actual phrase
-- `is_user_templated` means that the `text` can has inside a `%username%` mark which tells to the application to replace it to an actual username
-- `weight` brings a bit of probability. Allows the application to choose a phrase by it's probability (counts only between phrases with the same phrase type). Details: <a href="https://en.wikipedia.org/wiki/Fitness_proportionate_selection">Fitness proportionate selection</a>
-- `vk_audio_id` is an audio's id at Vkontakte, the application attaches it to a message if `is_audio_accompaniment` is true. Example of `vk_audio_id`, audio-2001545048_57545048
+For further configurations you have to have such buckets in your environment.
 
-</details>
+#### Phrases
 
-<details>
-    <summary><b>membership_warning</b></summary><br>
+File must contain rows with a specific structure:
 
-Contains information about membership warnings.
+```go
+type PhraseType string
 
-- `first_warning_ts` is a timestamp which tells about when the first time a member was notified about a membership
-- `grace_period` is a period which the application uses to define warning's status after `first_warning_ts`. For example, if `first_warning_ts + grace_period` less than `now()` then the warning has expired status
-- `is_relevant` is a flag which tells about a current status of a warning. For example, if warning already sent and grace period still justified, it has true, otherwise it has false.
+const (
+	// for new users in chat
+	WelcomeType           PhraseType = "welcome"
+	// for users who left
+	GoodbyeType           PhraseType = "goodbye"
+	// for users who in chat but not in a community
+	MembershipWarningType PhraseType = "membership_warning"
+	// for some general info like commands description
+	InfoType              PhraseType = "info"
+	// for responses with content requests
+	ContentRequestType    PhraseType = "content_request" 
+	// for cases where the application failed to find something
+	RetryType             PhraseType = "retry_request"
+)
 
-</details>
+type Phrase struct {
+	PhraseID   int        `csv:"phrase_id"`
+	// used for probability
+	// https://en.wikipedia.org/wiki/Fitness_proportionate_selection
+	// in brief, if its value more than others` value it has more chances to be picked up
+	Weight     int        `csv:"weight"`
+	PhraseType PhraseType `csv:"phrase_type"`
+	// use null if command is not supposed to use it
+	VkAudioId  string     `csv:"vk_audio_id"`
+	// use null if command is not supposed to use it
+	VkGifId    string     `csv:"vk_gif_id"`
+	// actual text of a phrase
+	Text       string     `csv:"text"`
+}
+```
+```
+csv file:
 
-<details>
-    <summary><b>source_type</b></summary><br>
+phrase_id1,weight,phrase_type,vk_audio_id,vk_gif_id,text
+phrase_id2,weight,phrase_type,vk_audio_id,vk_gif_id,text
+...
+1,100,welcome,null,doc120747496_641221964,"Hello there, %username%!"
+5,100,membership_warning,null,doc120747496_641228085,"%username%, this chat is only for community members 👻\nPlease subscribe quickly!"
+18,100,retry_request,null,doc120747496_646353718,"%username%, oops, we've failed, try again 👉🏻👈🏻"
+```
 
-Content sources could have different types.
+Phrases are used for responses on different types of events.
 
-By default the application uses these types:
+#### Commands
 
-- `audio`
-- `picture`
+File must contain rows with a specific structure: 
 
-</details>
+```go
+type CommandType string
 
-<details>
-    <summary><b>content_source</b></summary><br>
+const (
+	InfoCommand    CommandType = "info"
+	ContentCommand CommandType = "content"
+)
 
-- `vk_community_id` is a url name of a community. Example, vk.com/awesome_community. Here awesome_community is the url name.
+// CsvCommand storage specific object of Command
+type CsvCommand struct {
+	ID                int         `csv:"id"`
+	Commands          string      `csv:"commands"`
+	Type              CommandType `csv:"command_type"`
+	MediaContentTypes string      `csv:"media_types"`
+	CommunityIDs      string      `csv:"community_ids"`
+}
+```
 
-</details>
+```
+csv file:
 
-# Configurations
+id1,"alias1,alias2",command_type,"media_type1,media_type2","community_id1,community_id2"
+id2,"alias1,alias2",command_type,"media_type1,media_type2","community_id1,community_id2"
+...
+6,"jazzy music,🥸",content,audio,jazzjazz
+26,"👾,commands",info,,
+```
+
+- A command could have several aliases which users can call on in chat
+
+- A command can use several communities to fetch content from it
+
+- A command can has several media-content types to fetch from communities (randomly chosen per call)
+
+- `command_type` used for different types of command. There's a couple of them right now, command with `info` type sends in chat a phrase with the same type 
+
+#### Membership warnings
+
+```go
+type MembershipWarning struct {
+	WarningID      int       `csv:"warning_id"`
+	UserID         int       `csv:"user_id"`
+	Username       string    `csv:"username"`
+	// when user got first warning in chat about community membership
+	FirstWarningTs time.Time `csv:"first_warning_ts"`
+	// a period in which he has to subscribe, or he'll be kicked eventually
+	GracePeriod    string    `csv:"grace_period"`
+	// actual status of a warning 
+	// if a user got a warning and subscribed, then status will be updated
+	IsRelevant     bool      `csv:"is_relevant"`
+}
+```
+
+If you want to use such feature, then that structure will be used to upload actual status about warnings to a storage bucket by days.
+
+- 2022-23-10
+- 2022-24-10
+- 2022-25-10
+- .....
+
+Such files occur only if warnings happen in a day, so there could be some gaps between files.
+
+## Local application deployment
+
+### Application configurations
 
 **Mandatory configurations**
 
-|  Variable Name   | Description |
-| -------------   | ------------- |
-| `vk.community.bot.token (string)`     | You cant take it here *vk.com/<your_community>?act=tokens*  |
-| `vk.community.id (int)`   | It should be a positive integer value. You can take it by a click on some post at a community and take it from the url, like *vk.com/<your_community>?w=wall-<community_id>_8851* |
-| `vk.community.chat.id (int)`   | If you know peerId of a chat then a chat id will be like `peerId - 2000000000` result. Usually it has a sequence, so if it's your the first chat in a community then the chat id should be like 1 |
-| `pg.datasource.string (string)` | Example, *"host=localhost user=postgres password=postgres sslmode=disable dbname=chattweiler"* or *"postgresql://username:password@host:port/dbname?param1=arg1"* |
+- `vk.community.bot.token`
+
+A specific token for your community (e.g. "956c94e96...6039be4e")
+
+How to get: Enter your community > Manage > Settings > API usage > Access tokens
+
+- `vk.community.id`
+
+A specific community id (e.g. "161...464" as a number)
+
+You can get it somewhere in a community or by picking up from some wallpost's url `https://vk.com/community?w=wall-<id>_3394`
+
+- `vk.community.chat.id`
+
+An actual number of a chat, we've mentioned it earlier in the Quickstart
+
+- Yandex Object Storage
+  - `yandex.object.storage.access.key.id` (e.g. some token like `YCN1Ze...SJv`)
+  - `yandex.object.storage.secret.access.key` (e.g. some token like `YCA...cQ`)
+  - `yandex.object.storage.region` (e.g. `ru-central1`)
+  - `yandex.object.storage.phrases.bucket` (e.g. `phrases-bucket`)
+  - `yandex.object.storage.phrases.bucket.key` (e.g. `phrases_production.csv`)
+  - `yandex.object.storage.content.command.bucket` (e.g. `command-bucket`)
+  - `yandex.object.storage.content.command.bucket.key` (e.g `command_production.csv`)
+  - `yandex.object.storage.membership.warning.bucket` (e.g. `membership-warning-bucket`)
+
+Read [the documentation](https://cloud.yandex.com/en-ru/docs/storage/) how to get these values
+
+**Optional configurations**
+
+- `vk.admin.user.token` (by default not specified) if you're supposed to use content requesting, you have to have that one. Read [the documentation](https://dev.vk.com/api/access-token/implicit-flow-user) how to get such token
+
+- `chat.warden.membership.check.interval` (default: `10m`) a periodic interval after which the application goes to VK-API to compare actual members in a chat
+- `chat.warden.membership.grace.period` (default: `1h`) a period after which the application checks if a warned user subscribed to a community
+- `chat.use.first.name.instead.username` (default: `false`) either uses actual name of a user or his url-uid for communication (e.g. "John" or "john_2001")
+- `content.command.cache.refresh.interval` (default: `15m`) a periodic interval after which the application invalidates its cache with commands
+- `content.requests.queue.size` (default: `100`) a buffered channel size between event handler and command executors
+- `content.garbage.collectors.cleaning.interval` (default: `10m`) a periodic interval after which the application removes already unused content collectors which are cached
+- `phrases.cache.refresh.interval` (default: `15m`) a periodic interval after which the application invalidates its cache with phrases
+- `content.audio.max.cached.attachments` (default: `100`) a max number of content that could be stored in an application's cache
+- `content.audio.cache.refresh.threshold` (default: `0.2`) a threshold for a cache with content after which the cache fills out by new content
+- `content.picture.max.cached.attachments` (default: `100`) a max number of content that could be stored in an application's cache
+- `content.picture.cache.refresh.threshold` (default: `0.2`) a threshold for a cache with content after which the cache fills out by new content
+- `content.video.max.cached.attachments` (default: `100`) a max number of content that could be stored in an application's cache
+- `content.video.cache.refresh.threshold` (default: `0.2`) a threshold for a cache with content after which the cache fills out by new content
+- `bot.functionality.welcome.new.members` (default: `true`) enables welcome functionality
+- `bot.functionality.goodbye.members` (default: `true`) enables goodbye functionality
+- `bot.functionality.membership.checking` (default: `false`) enables membership checking functionality
+- `bot.functionality.content.commands` (default: `false`) enables requesting of media content functionality
+- `bot.log.file` (default: `false`) enables writing of a log file near an execution file
+
+### Deployment
+
+1. Clone the project `git clone git@github.com:drewlakee/chattweiler.git`
+2. Build a docker image `./chattweiler/build.sh`
+3. Create a configuration file `touch bot.env` and fill the mandatory variables
+4. Run a container with the image you've just built `./chattweiler/run.sh`
+5. Make fun out of it 👾
 
 <details>
-    <summary><b>vk optional configurations</b></summary><br>
-
-|  Variable Name | Default value | Description |
-| ------------- | ------------- | ------------- |
-| `vk.admin.user.token` | `"" (string)` | A community admin's "Implicit flow" token. Mandatory if you want to be able to use audio and picture request commands. <a href="https://dev.vk.com/api/access-token/getting-started">How to get it</a> |
+  <summary><b>Usage examples</b></summary>
+  
+![Screenshot 2022-10-31 at 16-11-04 Messenger](https://user-images.githubusercontent.com/44072343/199244389-1d16c36d-5136-4223-b8c8-959e29da4aeb.png)
+  
+![Screenshot 2022-10-31 at 16-13-06 Messenger](https://user-images.githubusercontent.com/44072343/199244378-b49e6aa0-7d94-41a7-b723-da94ed4d7ec5.png)
 
 </details>
 
-<details>
-    <summary><b>pg optional configurations</b></summary><br>
-
-|  Variable Name | Default value | Description |
-| ------------- | ------------- | ------------- |
-| `pg.phrases.cache.refresh.interval` | `15m (string, golang type - time.Duration)` | A phrases cache refresh interval |
-| `pg.content.source.cache.refresh.interval` | `15m (string, golang type - time.Duration)` | A content sources cache refresh interval |
-
-</details>
-
-<details>
-    <summary><b>chat optional configurations</b></summary><br>
-
-|  Variable Name  | Default value | Description |
-| -------------  | ------------- | ------------- |
-| `chat.warden.membership.check.interval` | `10m (string, golang type - time.Duration)` | An interval after which starts an async worker to check a chat for new membership warnings |
-| `chat.warden.membership.grace.period` | `1h (string, golang type - time.Duration)` | A period that the application will assign to new warnings about a membership |
-| `chat.use.first.name.instead.username` | `false (boolean)` | A toggle for using a first name of a member instead of his username. For example, Ammy (Joe etc.) instead of @username |
-
-</details>
-
-<details>
-    <summary><b>content optional configurations</b></summary><br>
-
-|  Variable Name  | Default value | Description |
-| -------------  | ------------- | ------------- |
-| `content.audio.max.cached.attachments` | `100 (int)` | A number of maximum available cached audio attachments |
-| `content.audio.cache.refresh.threshold` | `0.2 (float)` | A float value between 0.0 and 1.0. Used for audios cache refreshing |
-| `content.audio.queue.size` | `100 (int)` | A number of maximum requests queue for audio |
-| `content.picture.max.cached.attachments` | `100 (int)` | A number of maximum available cached picture attachments |
-| `content.picture.cache.refresh.threshold` | `0.2 (float)` | A float value between 0.0 and 1.0. Used for pictures cache refreshing |
-| `content.picture.queue.size` | `100 (int)` | A number of maximum requests queue for picture |
-
-</details>
-
-<details>
-    <summary><b>bot optional configurations</b></summary><br>
-
-|  Variable Name   | Default value | Description |
-| -------------  | ------------- | ------------- |
-| `bot.command.override.info` | `bark! (string)` | A variable for info command name overriding |
-| `bot.command.override.audio.request` | `sing song! (string)` | A variable for audio request command name overriding |
-| `bot.command.override.picture.request` | `gimme pic! (string)` | A variable for picture request command name overriding |
-| `bot.functionality.welcome.new.members` | `true (boolean)` | A toggle for new members welcome functions |
-| `bot.functionality.goodbye.members` | `true (boolean)` | A toggle for goodbye members' leavings functions |
-| `bot.functionality.membership.checking` | `true (boolean)` | A toggle for membership checking functions  |
-| `bot.functionality.audio.requests` | `false (boolean)` | A toggle for audio requests handling functions |
-| `bot.functionality.picture.requests` | `false (boolean)` | A toggle for picture requests handling functions |
-
-</details>
-
-# How To Run
-
-Before the application will be running, create the file `bot.env` inside the project directory and fill it up by all the mandatory environment variables.
-
-Run the commands in the console:
-
-```
-# optional if you have your own postgres running
-# also see: sql/initdb.sql - initial scripts
-./runPgLocally.sh 
-
-# build a docker image and run a container using the image 
-./build.sh && ./run.sh
-```
+** If you are supposed to use file logging, you can make a volume by adding to the command in `./chattweiler/run.sh` a piece of settings `docker run -v /path/to/your/log/directory:/application/logs ...`

@@ -1,1 +1,1 @@
-docker build -f Dockerfile.multistage -t chattweiler:2.0 .
+docker build -f Dockerfile.multistage -t chattweiler:2.1 .

@@ -1,62 +1,31 @@
 package main
 
 import (
-	"chattweiler/pkg/app/utils"
-	"chattweiler/pkg/bot"
-	"chattweiler/pkg/repository/pg"
-	"github.com/jmoiron/sqlx"
+	"chattweiler/internal/bot"
+	"chattweiler/internal/configs"
+	"chattweiler/internal/logging"
+	"chattweiler/internal/repository"
+	"chattweiler/internal/repository/factory"
+	"chattweiler/internal/utils"
 	_ "github.com/lib/pq"
-	"github.com/sirupsen/logrus"
-	"time"
 )
 
-var packageLogFields = logrus.Fields{
-	"package": "main",
-}
-
 func main() {
-	logrus.SetFormatter(&logrus.JSONFormatter{})
+	logging.Log.Info("main", "main", "preparing bot instance...")
+	logging.Log.Info("main", "main", "creating and checking phrases repository...")
+	phrases := factory.CreatePhraseRepository(factory.CsvYandexObjectStorage)
 
-	vkBotToken := utils.GetEnvOrDefault("vk.community.bot.token", "unset")
-	if vkBotToken == "unset" {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "main",
-		}).Fatal("vk.community.bot.token is unset")
+	var membershipWarnings repository.MembershipWarningRepository
+	if utils.GetEnvOrDefault(configs.BotFunctionalityMembershipChecking) == "true" {
+		logging.Log.Info("main", "main", "creating and checking membership warnings repository...")
+		membershipWarnings = factory.CreateMembershipWarningRepository(factory.CsvYandexObjectStorage)
+	} else {
+		membershipWarnings = nil
 	}
 
-	pgDataSourceString := utils.GetEnvOrDefault("pg.datasource.string", "unset")
-	if pgDataSourceString == "unset" {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "main",
-		}).Fatal("pg.datasource.string is unset")
-	}
+	logging.Log.Info("main", "main", "creating and checking commands repository...")
+	commands := factory.CreateContentSourceRepository(factory.CsvYandexObjectStorage)
 
-	db, err := sqlx.Connect("postgres", pgDataSourceString)
-	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "main",
-			"err":  err,
-		}).Fatal("Postgres connection error")
-	}
-
-	pgPhrasesCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault("pg.phrases.cache.refresh.interval", "15m"))
-	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "main",
-			"err":  err,
-		}).Fatal("pg.phrases.cache.refresh.interval parse error")
-	}
-
-	pgContentSourceCacheRefreshInterval, err := time.ParseDuration(utils.GetEnvOrDefault("pg.content.source.cache.refresh.interval", "15m"))
-	if err != nil {
-		logrus.WithFields(packageLogFields).WithFields(logrus.Fields{
-			"func": "main",
-			"err":  err,
-		}).Fatal("pg.content.source.cache.refresh.interval parse error")
-	}
-
-	pgCachedContentSourceRepository := pg.NewCachedPgContentSourceRepository(db, pgContentSourceCacheRefreshInterval)
-	pgCachedPhraseRepository := pg.NewCachedPgPhraseRepository(db, pgPhrasesCacheRefreshInterval)
-	pgMembershipWarningRepository := pg.NewPgMembershipWarningRepository(db)
-	bot.NewBot(vkBotToken, pgCachedPhraseRepository, pgMembershipWarningRepository, pgCachedContentSourceRepository).Start()
+	logging.Log.Info("main", "main", "creating bot instance...")
+	bot.NewLongPoolingBot(phrases, membershipWarnings, commands).Serve()
 }
