@@ -1,7 +1,3 @@
-<div align="center">
-    <img src="https://user-images.githubusercontent.com/44072343/199232272-f6270d6c-816c-4c52-a8ae-b0fca8b6d16d.png" width="500" alt="logo">
-</div>
-
 # Chattweiler
 
 Chattweiler is a server-side application that handles events which come from VK community chat
@@ -22,7 +18,7 @@ Inspirations for the development are:
 ## Application context schema
 
 <div align="center">
-    <img src="https://user-images.githubusercontent.com/44072343/199017712-79e20846-a071-4bbc-8c78-8acfe6e1f1b4.jpg" alt="logo">
+    <img src="https://user-images.githubusercontent.com/44072343/200119060-c7feda44-b3ca-40ab-afb5-23cef2fddc8a.jpg" alt="logo">
 </div>
 
 As you might already have noticed the application uses for storage [Yandex Object Storage](https://cloud.yandex.com/en-ru/services/storage) solution, 
